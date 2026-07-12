@@ -1,0 +1,8 @@
+{
+  "name": "SYNQ WFM",
+  "description": "Call center scheduling and shift management tool with agent and team leader views.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
