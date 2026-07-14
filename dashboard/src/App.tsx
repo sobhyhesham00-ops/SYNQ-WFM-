@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, egp, WS_BASE, API_BASE, type Driver, type Order } from './api';
+import { api, egp, WS_BASE, API_BASE, type Driver, type Order, type Business } from './api';
 import { LiveMap } from './LiveMap';
 import { useTracking } from './useTracking';
 import { Login } from './Login';
+import { useLang } from './i18n';
 
 const initials = (name: string) =>
   name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
 export default function App() {
+  const { t, lang, setLang } = useLang();
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('meshwar_token'));
   const [name, setName] = useState(() => localStorage.getItem('meshwar_name') ?? '');
+  const [business, setBusiness] = useState<Business | null>(null);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [route, setRoute] = useState<{ lat: number; lng: number }[] | null>(null);
@@ -24,25 +27,23 @@ export default function App() {
   }
 
   const refresh = () =>
-    token && api.state(token).then((s) => { setDrivers(s.drivers); setOrders(s.orders); });
+    token && api.state(token).then((s) => { setBusiness(s.business); setDrivers(s.drivers); setOrders(s.orders); });
 
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [token]);
 
-  function onLogin(t: string, n: string) {
-    localStorage.setItem('meshwar_token', t);
+  function onLogin(tok: string, n: string) {
+    localStorage.setItem('meshwar_token', tok);
     localStorage.setItem('meshwar_name', n);
-    setToken(t); setName(n);
+    setToken(tok); setName(n);
   }
-  function logout() { localStorage.clear(); setToken(null); }
+  function logout() { localStorage.removeItem('meshwar_token'); localStorage.removeItem('meshwar_name'); setToken(null); }
 
-  // Grand total owed across the fleet = sum of live drawer totals (fallback: seed).
   const grandTotalPiastres = useMemo(() => {
     let sum = 0;
     for (const d of drivers) {
       const drawer = drawers[d.id];
       if (drawer) sum += Math.round(parseFloat(drawer.totalEGP.replace(/,/g, '')) * 100);
     }
-    // Fallback to seed data (delivered & unsettled) before any WS event arrives.
     if (sum === 0) {
       for (const o of orders)
         if (o.status === 'Delivered' && !o.settled) sum += o.totalCashToCollect;
@@ -51,6 +52,7 @@ export default function App() {
   }, [drivers, drawers, orders]);
 
   const activeCount = drivers.filter((d) => d.status !== 'Offline').length;
+  const isPharmacy = business?.businessType === 'Pharmacy';
 
   if (!token) return <Login onLogin={onLogin} />;
 
@@ -60,30 +62,38 @@ export default function App() {
         <LiveMap drivers={drivers} livePins={pins} route={route} />
         {replayDriver && (
           <button className="replay-banner" onClick={() => { setRoute(null); setReplayDriver(null); }}>
-            ▶ Replaying {drivers.find((d) => d.id === replayDriver)?.name}'s route · tap to exit
+            ▶ {t('replaying', { name: drivers.find((d) => d.id === replayDriver)?.name ?? '' })}
           </button>
         )}
       </div>
 
       <aside className="sidebar">
         <div className="brandbar">
-          <div className="brand"><span className="brand-dot" /> Meshwar <span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 700 }}>مشوار</span></div>
-          <button className="ghost-btn" onClick={logout}>{name || 'Logout'} ⏻</button>
+          <div className="brand">
+            <span className="brand-dot" /> Meshwar <span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 700 }}>مشوار</span>
+            {business && <span className="biz-badge">{t(`biz.${business.businessType}`)}</span>}
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="ghost-btn" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}>
+              {lang === 'ar' ? 'EN' : 'ع'}
+            </button>
+            <button className="ghost-btn" onClick={logout}>{name || t('logout')} ⏻</button>
+          </div>
         </div>
 
-        {/* Hero: fleet cash to collect at end of shift */}
+        {/* Hero: fleet cash to collect */}
         <div className="hero">
-          <div className="hero-label">CASH TO COLLECT FROM FLEET</div>
+          <div className="hero-label">{t('cashToCollect')}</div>
           <div className="hero-amount">{egp(grandTotalPiastres)}</div>
-          <div className="hero-sub">{activeCount} drivers on shift · refreshed live</div>
+          <div className="hero-sub">{t('driversOnShift', { n: activeCount })}</div>
           <div className="hero-chips">
-            <button className="hero-chip">⛽ {drivers.length} drivers</button>
-            <button className="hero-chip">📦 {orders.filter((o) => o.status !== 'Delivered').length} open orders</button>
+            <button className="hero-chip">🛵 {t('driversCount', { n: drivers.length })}</button>
+            <button className="hero-chip">📦 {t('openOrders', { n: orders.filter((o) => o.status !== 'Delivered').length })}</button>
           </div>
         </div>
 
         {/* Cash drawer per driver */}
-        <div className="section-head"><h3>Cash drawer</h3><a>End of shift</a></div>
+        <div className="section-head"><h3>{t('cashDrawer')}</h3><a>{t('endOfShift')}</a></div>
         {drivers.map((d) => {
           const drawer = drawers[d.id];
           const seedOwed = orders
@@ -98,10 +108,10 @@ export default function App() {
                   <div className="name">{d.name}</div>
                   <div className="subtle">{d.phone}</div>
                 </div>
-                <span className={`chip ${d.status}`}>{d.status}</span>
+                <span className={`chip ${d.status}`}>{t(`status.${d.status}`)}</span>
               </div>
               <div className="row" style={{ marginTop: 10 }}>
-                <div className="grow subtle">Owes cashier</div>
+                <div className="grow subtle">{t('owesCashier')}</div>
                 <div className="amount">{owedEGP ?? '—'}</div>
               </div>
               <div className="row" style={{ gap: 8, marginTop: 10 }}>
@@ -110,18 +120,17 @@ export default function App() {
                   disabled={!owedEGP}
                   onClick={async () => {
                     const r = await api.settle(token, d.id);
-                    alert(`Collected ${r.settledEGP} EGP from ${d.name} (${r.orderCount} orders)`);
+                    alert(t('collectedFrom', { amount: r.settledEGP + ' EGP', name: d.name, count: r.orderCount }));
                     refresh();
                   }}
                 >
-                  Received cash
+                  {t('receivedCash')}
                 </button>
                 <button
                   className={`ghost-pill ${replayDriver === d.id ? 'on' : ''}`}
                   onClick={() => toggleReplay(d.id)}
-                  title="Replay today's route"
                 >
-                  {replayDriver === d.id ? '■ Stop' : '▶ Route'}
+                  {replayDriver === d.id ? `■ ${t('stop')}` : `▶ ${t('route')}`}
                 </button>
               </div>
             </div>
@@ -129,48 +138,56 @@ export default function App() {
         })}
 
         {/* Orders */}
-        <div className="section-head"><h3>Orders</h3></div>
-        <NewOrder onCreate={async (addr, amt) => { await api.createOrder(token, addr, amt); refresh(); }} />
+        <div className="section-head"><h3>{t('orders')}</h3></div>
+        <NewOrder isPharmacy={isPharmacy}
+          onCreate={(o) => api.createOrder(token, o).then(refresh)} />
         <div className="card" style={{ padding: '4px 12px' }}>
           {orders.map((o) => (
             <div className="order" key={o.id}>
               <div className="grow">
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{o.customerAddress}</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                  {o.customerAddress}
+                  {o.requiresPrescription && <span className="rx" title={t('prescriptionReq')}>℞</span>}
+                </div>
+                {o.landmark && <div className="subtle">📍 {o.landmark}</div>}
                 <div className="subtle">{egp(o.totalCashToCollect)}</div>
+                <div className="row" style={{ gap: 10, marginTop: 4 }}>
+                  {o.customerPhone && (
+                    <a className="link-btn" href={`tel:${o.customerPhone}`}>📞 {t('call')}</a>
+                  )}
+                  {(o.status === 'Assigned' || o.status === 'PickedUp') && (
+                    <button
+                      className="link-btn"
+                      onClick={() => {
+                        const url = `${API_BASE}/t/${o.publicToken}`;
+                        navigator.clipboard?.writeText(url);
+                        alert(t('linkCopied', { url }));
+                      }}
+                    >
+                      🔗 {t('shareTracking')}
+                    </button>
+                  )}
+                </div>
                 {o.status === 'Pending' && (
                   <select
                     className="select"
                     defaultValue=""
                     onChange={(e) => e.target.value && api.assign(token, o.id, e.target.value).then(refresh)}
                   >
-                    <option value="" disabled>Assign to…</option>
+                    <option value="" disabled>{t('assignTo')}</option>
                     {drivers.filter((d) => d.status !== 'Offline').map((d) => (
                       <option key={d.id} value={d.id}>{d.name}</option>
                     ))}
                   </select>
                 )}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                <span className="subtle" style={{ fontWeight: 600 }}>
-                  <span
-                    className="status-dot"
-                    style={{ background: o.status === 'Delivered' ? 'var(--ok)' : o.status === 'Pending' ? '#f0a500' : 'var(--brand)' }}
-                  />
-                  {o.status}
-                </span>
-                {(o.status === 'Assigned' || o.status === 'PickedUp') && (
-                  <button
-                    className="link-btn"
-                    onClick={() => {
-                      const url = `${API_BASE}/t/${o.publicToken}`;
-                      navigator.clipboard?.writeText(url);
-                      alert(`Customer tracking link copied:\n${url}`);
-                    }}
-                  >
-                    🔗 Share tracking
-                  </button>
-                )}
-              </div>
+              <span className="subtle" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                <span
+                  className="status-dot"
+                  style={{ background: o.status === 'Delivered' ? 'var(--ok)' : o.status === 'Pending' ? '#f0a500' : 'var(--brand)' }}
+                />
+                {t(`status.${o.status}`)}
+              </span>
             </div>
           ))}
         </div>
@@ -179,17 +196,36 @@ export default function App() {
   );
 }
 
-function NewOrder({ onCreate }: { onCreate: (addr: string, amt: number) => void }) {
+function NewOrder({ isPharmacy, onCreate }: {
+  isPharmacy: boolean;
+  onCreate: (o: { customerAddress: string; totalCashEGP: number; landmark?: string; requiresPrescription?: boolean }) => void;
+}) {
+  const { t } = useLang();
   const [addr, setAddr] = useState('');
+  const [landmark, setLandmark] = useState('');
   const [amt, setAmt] = useState('');
+  const [rx, setRx] = useState(false);
   return (
-    <div style={{ display: 'flex', gap: 6 }}>
-      <input className="mini-input" style={{ flex: 2 }} placeholder="Customer address"
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <input className="mini-input" placeholder={t('customerAddress')}
         value={addr} onChange={(e) => setAddr(e.target.value)} />
-      <input className="mini-input" style={{ width: 70 }} placeholder="EGP"
-        value={amt} onChange={(e) => setAmt(e.target.value)} />
-      <button className="add-btn"
-        onClick={() => { if (addr && amt) { onCreate(addr, Number(amt)); setAddr(''); setAmt(''); } }}>+</button>
+      <input className="mini-input" placeholder={t('landmark')}
+        value={landmark} onChange={(e) => setLandmark(e.target.value)} />
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input className="mini-input" style={{ width: 80 }} placeholder="EGP"
+          value={amt} onChange={(e) => setAmt(e.target.value)} />
+        {isPharmacy && (
+          <label className="subtle" style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+            <input type="checkbox" checked={rx} onChange={(e) => setRx(e.target.checked)} /> {t('prescriptionReq')}
+          </label>
+        )}
+        <button className="add-btn" onClick={() => {
+          if (addr && amt) {
+            onCreate({ customerAddress: addr, totalCashEGP: Number(amt), landmark: landmark || undefined, requiresPrescription: rx });
+            setAddr(''); setLandmark(''); setAmt(''); setRx(false);
+          }
+        }}>+</button>
+      </div>
     </div>
   );
 }

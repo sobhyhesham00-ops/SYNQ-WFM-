@@ -7,6 +7,18 @@
 **Two apps, one system:** a battery-proof Flutter **driver app**, and a React
 **manager/cashier dashboard** — talking to one lean Node + PostgreSQL backend.
 
+**Built for Egypt's small merchants.** Multi-vertical by design — restaurants,
+takeaways, pharmacies (with prescription flags), groceries, mini-markets, the
+street **koshk (كشك)**, and a catch-all store. Fully **bilingual: Egyptian
+Arabic (colloquial, RTL) + English**, with a one-tap language toggle across the
+dashboard, driver app, and customer tracking page. Landmark-based addressing,
+one-tap **Call**/WhatsApp, and COD reconciliation reflect how deliveries
+actually work here — see [`docs/EGYPT-MARKET.md`](docs/EGYPT-MARKET.md).
+
+| Dashboard — Egyptian Arabic (RTL) | Pharmacy vertical (℞ + prescription) | Customer tracking (Arabic) |
+|---|---|---|
+| ![AR dashboard](docs/screenshots/i18n-restaurant-ar.png) | ![Pharmacy](docs/screenshots/i18n-pharmacy-ar.png) | ![Customer](docs/screenshots/i18n-customer-ar.png) |
+
 ## Screenshots
 
 The dashboard running against the real backend (Postgres + WebSocket). Street

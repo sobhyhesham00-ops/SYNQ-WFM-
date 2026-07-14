@@ -18,12 +18,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// A tenant. Every driver, order and dashboard session belongs to one.
+// The kind of merchant using Meshwar. Drives the UI's vocabulary per vertical.
+// Covers Egypt's small-merchant long tail: eateries, pharmacies, groceries
+// (بقالة), mini-markets, the ubiquitous street kiosk (كشك), and a catch-all.
+enum BusinessType {
+  Restaurant
+  Takeaway
+  Pharmacy
+  Grocery
+  Minimarket
+  Kiosk
+  Other
+}
+
+// A tenant merchant (restaurant / takeaway / pharmacy). Every driver, order and
+// dashboard session belongs to one. (Model kept named `Restaurant` for FK
+// stability; `businessType` is the real vertical — surfaced as "business".)
 model Restaurant {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String?
-  createdAt DateTime @default(now())
+  id           String       @id @default(uuid())
+  name         String
+  phone        String?
+  businessType BusinessType @default(Restaurant)
+  createdAt    DateTime     @default(now())
 
   drivers Driver[]
   orders  Order[]
@@ -89,6 +105,11 @@ model Order {
 
   customerAddress  String
   customerPhone    String?
+  // Egypt is landmark-addressed ("over the pharmacy, next to the mosque").
+  landmark         String?
+  notes            String?
+  // Pharmacy: does this delivery require a prescription (روشتة)?
+  requiresPrescription Boolean @default(false)
   // Amount the driver must collect from the customer, in piastres.
   totalCashToCollect Int
   status           OrderStatus @default(Pending)

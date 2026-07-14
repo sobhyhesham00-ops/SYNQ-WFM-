@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Arabic (RTL) + English localization delegates.
+  flutter_localizations:
+    sdk: flutter
   # Battery/background-proof tracking (foreground service on Android).
   flutter_background_service: ^5.0.5
   flutter_background_service_android: ^6.2.2

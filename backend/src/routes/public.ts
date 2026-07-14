@@ -25,7 +25,7 @@ publicRouter.get('/track/:token', async (req, res) => {
       status: true,
       customerAddress: true,
       totalCashToCollect: true,
-      restaurant: { select: { name: true } },
+      restaurant: { select: { name: true, businessType: true, phone: true } },
       driver: {
         select: { name: true, currentLat: true, currentLng: true, lastSeenAt: true },
       },
@@ -38,8 +38,10 @@ publicRouter.get('/track/:token', async (req, res) => {
   res.json({
     stage: STAGE[order.status] ?? order.status,
     status: order.status,
-    restaurantName: order.restaurant.name,
-    customerAddress: order.customerAddress,
+    businessName: order.restaurant.name,
+    businessType: order.restaurant.businessType, // Restaurant | Takeaway | Pharmacy
+    businessPhone: order.restaurant.phone,
+    customerAddress: order.customerAddress, // never itemized contents (privacy)
     cashToPayEGP: (order.totalCashToCollect / 100).toFixed(2),
     driver: inFlight && order.driver
       ? {

@@ -32,7 +32,11 @@ orderRouter.get('/drivers/:id/route', requireManager, async (req, res) => {
 // The live WS stream takes over from here for incremental updates.
 orderRouter.get('/state', requireManager, async (req, res) => {
   const rid = req.auth!.restaurantId;
-  const [drivers, orders] = await Promise.all([
+  const [business, drivers, orders] = await Promise.all([
+    prisma.restaurant.findUnique({
+      where: { id: rid },
+      select: { name: true, businessType: true },
+    }),
     prisma.driver.findMany({
       where: { restaurantId: rid },
       select: {
@@ -45,17 +49,20 @@ orderRouter.get('/state', requireManager, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     }),
   ]);
-  res.json({ drivers, orders });
+  res.json({ business, drivers, orders });
 });
 
 // Manager creates an order. Amount arrives in EGP; store as piastres.
 orderRouter.post('/orders', requireManager, async (req, res) => {
-  const { customerAddress, customerPhone, totalCashEGP } = req.body;
+  const { customerAddress, customerPhone, landmark, notes, requiresPrescription, totalCashEGP } = req.body;
   const order = await prisma.order.create({
     data: {
       restaurantId: req.auth!.restaurantId,
       customerAddress,
       customerPhone,
+      landmark,
+      notes,
+      requiresPrescription: Boolean(requiresPrescription),
       totalCashToCollect: Math.round(Number(totalCashEGP) * 100),
     },
   });

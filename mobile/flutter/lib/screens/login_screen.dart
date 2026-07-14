@@ -1,6 +1,7 @@
 // Driver login — phone + PIN, themed to match the dashboard.
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../i18n.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -44,21 +45,27 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Text('Meshwar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
                   const SizedBox(width: 8),
                   const Text('مشوار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: MeshwarColors.muted)),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => toggleLang(),
+                    child: Text(langNotifier.value == 'ar' ? 'English' : 'العربية',
+                      style: const TextStyle(color: MeshwarColors.brand, fontWeight: FontWeight.w700)),
+                  ),
                 ]),
                 const SizedBox(height: 6),
-                Text('Driver sign in', style: TextStyle(color: MeshwarColors.muted)),
+                Text(tr('driverSignIn'), style: const TextStyle(color: MeshwarColors.muted)),
                 const SizedBox(height: 18),
                 TextField(controller: _phone, keyboardType: TextInputType.phone,
-                  decoration: _dec('Phone number')),
+                  decoration: _dec(tr('phone'))),
                 const SizedBox(height: 12),
                 TextField(controller: _pin, obscureText: true, keyboardType: TextInputType.number,
-                  decoration: _dec('PIN')),
+                  decoration: _dec(tr('pin'))),
                 const SizedBox(height: 18),
                 FilledButton(
                   onPressed: _loading ? null : _submit,
                   child: _loading
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Sign in'),
+                      : Text(tr('signIn')),
                 ),
               ],
             ),

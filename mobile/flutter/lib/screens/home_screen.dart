@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../theme.dart';
 import '../services/location_service.dart';
 import '../services/api_client.dart';
+import '../i18n.dart';
 import 'delivery_screen.dart';
 import 'earnings_screen.dart';
 
@@ -106,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 else { endShift(); }
                 setState(() => _onShift = !_onShift);
               },
-              child: Text(_onShift ? 'إنهاء الوردية · End shift' : 'بدء الوردية · Start shift'),
+              child: Text(_onShift ? tr('endShift') : tr('startShift')),
             ),
             if (_onShift)
               Padding(
@@ -114,12 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   const Icon(Icons.circle, color: MeshwarColors.ok, size: 10),
                   const SizedBox(width: 6),
-                  Text('Location sharing on', style: TextStyle(color: MeshwarColors.muted, fontSize: 12)),
+                  Text(tr('locationOn'), style: const TextStyle(color: MeshwarColors.muted, fontSize: 12)),
                 ]),
               ),
             const SizedBox(height: 20),
 
-            const Text('My orders', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            Text(tr('myOrders'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             const SizedBox(height: 10),
             ..._orders.asMap().entries.map((e) {
               final i = e.key;

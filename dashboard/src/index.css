@@ -94,8 +94,16 @@ body {
 .ghost-pill.on { background: var(--brand); color: #fff; border-color: var(--brand); }
 
 .link-btn { border: none; background: transparent; color: var(--brand); font-weight: 700;
-  font-size: 12px; cursor: pointer; padding: 0; white-space: nowrap; }
+  font-size: 12px; cursor: pointer; padding: 0; white-space: nowrap; text-decoration: none; }
 .link-btn:hover { text-decoration: underline; }
+
+.biz-badge { font-size: 11px; font-weight: 700; color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 12%, transparent); padding: 3px 9px;
+  border-radius: 999px; margin-inline-start: 8px; }
+.rx { color: var(--danger); font-weight: 800; margin-inline-start: 6px; font-size: 14px; }
+
+/* RTL: mirror the two-column layout so the sidebar sits on the natural side. */
+:root[dir="rtl"] .map-pane { margin: 16px 16px 16px 0; }
 
 .replay-banner { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
   border: none; cursor: pointer; background: rgba(124,92,255,.95); color: #fff; font-weight: 700;

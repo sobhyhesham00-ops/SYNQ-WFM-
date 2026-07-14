@@ -22,7 +22,10 @@ function sign(ctx: AuthContext): string {
 // Manager / cashier login (web dashboard).
 authRouter.post('/auth/manager/login', async (req, res) => {
   const { email, password } = req.body;
-  const user = await prisma.managerUser.findUnique({ where: { email } });
+  const user = await prisma.managerUser.findUnique({
+    where: { email },
+    include: { restaurant: { select: { name: true, businessType: true } } },
+  });
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     return res.status(401).json({ error: 'invalid credentials' });
   }
@@ -31,7 +34,13 @@ authRouter.post('/auth/manager/login', async (req, res) => {
     managerId: user.id,
     role: user.role as 'manager' | 'cashier',
   });
-  res.json({ token, name: user.name, role: user.role });
+  res.json({
+    token,
+    name: user.name,
+    role: user.role,
+    businessName: user.restaurant.name,
+    businessType: user.restaurant.businessType, // Restaurant | Takeaway | Pharmacy
+  });
 });
 
 // Driver login (mobile app) — phone + PIN/password.

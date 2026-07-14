@@ -7,10 +7,15 @@ export interface Driver {
   status: 'Idle' | 'Delivering' | 'Offline';
   currentLat: number | null; currentLng: number | null; lastSeenAt: string | null;
 }
+export type BusinessType = 'Restaurant' | 'Takeaway' | 'Pharmacy' | 'Grocery' | 'Minimarket' | 'Kiosk' | 'Other';
+export interface Business { name: string; businessType: BusinessType }
+
 export interface Order {
   id: string; customerAddress: string; totalCashToCollect: number;
   status: string; driverId: string | null; deliveredAt: string | null; settled: boolean;
   publicToken: string;
+  customerPhone: string | null; landmark: string | null; notes: string | null;
+  requiresPrescription: boolean;
 }
 
 async function req(path: string, token: string, init?: RequestInit) {
@@ -29,7 +34,7 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('login failed')))),
 
-  state: (token: string): Promise<{ drivers: Driver[]; orders: Order[] }> =>
+  state: (token: string): Promise<{ business: Business; drivers: Driver[]; orders: Order[] }> =>
     req('/api/state', token),
 
   cashDrawer: (token: string) => req('/api/cash-drawer', token),
@@ -37,8 +42,9 @@ export const api = {
   settle: (token: string, driverId: string) =>
     req(`/api/drivers/${driverId}/settle`, token, { method: 'POST' }),
 
-  createOrder: (token: string, customerAddress: string, totalCashEGP: number) =>
-    req('/api/orders', token, { method: 'POST', body: JSON.stringify({ customerAddress, totalCashEGP }) }),
+  createOrder: (token: string, o: { customerAddress: string; totalCashEGP: number;
+    landmark?: string; customerPhone?: string; requiresPrescription?: boolean }) =>
+    req('/api/orders', token, { method: 'POST', body: JSON.stringify(o) }),
 
   assign: (token: string, orderId: string, driverId: string) =>
     req(`/api/orders/${orderId}/assign`, token, { method: 'POST', body: JSON.stringify({ driverId }) }),
