@@ -13,22 +13,6 @@ const egp = (piastres: number) =>
 
 const egpNum = (piastres: number) => (piastres / 100).toFixed(2);
 
-// Toggle "available for hire" (the captain opts into the discovery directory).
-driverRouter.patch('/driver/me/availability', requireDriver, async (req, res) => {
-  const { availableForHire, city, vehicle } = req.body as
-    { availableForHire?: boolean; city?: string; vehicle?: string };
-  const d = await prisma.driver.update({
-    where: { id: req.auth!.driverId! },
-    data: {
-      ...(typeof availableForHire === 'boolean' ? { availableForHire } : {}),
-      ...(city !== undefined ? { city } : {}),
-      ...(vehicle !== undefined ? { vehicle } : {}),
-    },
-    select: { availableForHire: true, city: true, vehicle: true },
-  });
-  res.json(d);
-});
-
 // Register/refresh the driver's FCM device token for push notifications.
 driverRouter.post('/driver/me/fcm-token', requireDriver, async (req, res) => {
   const { token } = req.body as { token?: string };

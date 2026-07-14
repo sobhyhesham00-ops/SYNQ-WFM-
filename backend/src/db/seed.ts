@@ -49,7 +49,6 @@ async function main() {
         currentLat: 30.0561,
         currentLng: 31.2394,
         status: 'Delivering',
-        availableForHire: true, city: 'Downtown Cairo', vehicle: 'Motorbike',
       },
     }),
   ]);
@@ -88,7 +87,6 @@ async function main() {
     data: {
       restaurantId: pharmacy.id, name: 'Ramy', phone: '01000000003',
       passwordHash: hash('1234'), currentLat: 30.05, currentLng: 31.24, status: 'Delivering',
-      availableForHire: true, city: 'Downtown Cairo', vehicle: 'Tuk-tuk',
     },
   });
   await prisma.order.createMany({

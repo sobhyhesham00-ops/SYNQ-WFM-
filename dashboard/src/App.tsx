@@ -7,7 +7,6 @@ import { Signup } from './Signup';
 import { RamadanBanner } from './RamadanBanner';
 import { Onboarding } from './Onboarding';
 import { Analytics } from './Analytics';
-import { FindCaptain } from './FindCaptain';
 import { useLang } from './i18n';
 
 const initials = (name: string) =>
@@ -146,9 +145,6 @@ export default function App() {
         {(drivers.length === 0 || orders.length === 0)
           ? <Onboarding token={token} hasDriver={drivers.length > 0} hasOrder={orders.length > 0} onChange={refresh} />
           : <Analytics token={token} refreshKey={refreshKey} />}
-
-        {/* Find a Captain — hire from the open directory */}
-        <FindCaptain token={token} onAdded={refresh} />
 
         {/* Cash drawer per driver */}
         <div className="section-head">

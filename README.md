@@ -44,13 +44,6 @@ the shop (Haversine over live GPS) and flags the 🎯 nearest one.
 |---|---|
 | ![Delivery code](docs/screenshots/proof-code.png) | ![Rating](docs/screenshots/proof-rating.png) |
 
-**Find a Captain (directory):** drivers can opt in as *available for hire*; a
-merchant who needs one browses nearby captains (rating, vehicle, distance) and
-**contacts them directly** (call / WhatsApp) to arrange it privately. Pure
-discovery — El Kaptin makes the intro but never handles the captain's pay, takes
-a commission, or routes COD between strangers, keeping it a noticeboard rather
-than a dispatch/employment tool. See `dashboard/src/FindCaptain.tsx`.
-
 **Proof of delivery:** every assignment mints a 4-digit code shown on the
 customer's tracking page; the driver must enter it to mark *Delivered* — cutting
 COD "I never got it" disputes. **Ratings:** the customer rates the driver after

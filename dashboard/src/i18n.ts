@@ -84,16 +84,6 @@ const en: Dict = {
   minsShort: '{n} min',
   nearest: 'nearest',
   exportCsv: 'Export week (CSV)',
-  // find a captain
-  findCaptain: 'Find a Captain',
-  findCaptainSub: 'Independent captains near you, available for hire',
-  noCaptains: 'No available captains nearby right now',
-  kmAway: '{n} km away',
-  online: 'online',
-  offline: 'offline',
-  addToFleet: 'Add to my fleet',
-  addedToFleet: '{name} added to your fleet · PIN {pin}',
-  contactNote: 'Contact them directly to agree terms — El Kaptin just makes the intro.',
 };
 
 const ar: Dict = {
@@ -172,16 +162,6 @@ const ar: Dict = {
   minsShort: '{n} د',
   nearest: 'الأقرب',
   exportCsv: 'تصدير الأسبوع (CSV)',
-  // find a captain
-  findCaptain: 'دوّر على كابتن',
-  findCaptainSub: 'كباتن مستقلين قريبين منك ومتاحين للعمل',
-  noCaptains: 'مفيش كباتن متاحين قريبين دلوقتي',
-  kmAway: 'على بُعد {n} كم',
-  online: 'متصل',
-  offline: 'غير متصل',
-  addToFleet: 'ضيفه لفريقي',
-  addedToFleet: 'اتضاف {name} لفريقك · الرقم السري {pin}',
-  contactNote: 'كلّمه على طول واتفقوا — الكابتن بس بيعرّفكم ببعض.',
 };
 
 const dicts: Record<Lang, Dict> = { en, ar };

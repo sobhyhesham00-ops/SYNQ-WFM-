@@ -68,20 +68,6 @@ class DriverApi {
   }
 
   /// Update order status. Delivered requires the customer's 4-digit [otp].
-  /// Opt in/out of the "Find a Captain" directory (available for hire).
-  Future<void> setAvailability(bool available, {String? city, String? vehicle}) async {
-    final res = await http.patch(
-      Uri.parse('$baseUrl/api/driver/me/availability'),
-      headers: _h,
-      body: jsonEncode({
-        'availableForHire': available,
-        if (city != null) 'city': city,
-        if (vehicle != null) 'vehicle': vehicle,
-      }),
-    );
-    if (res.statusCode >= 400) throw Exception('availability failed');
-  }
-
   Future<void> setStatus(String orderId, String status, {String? otp}) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/orders/$orderId/status'),

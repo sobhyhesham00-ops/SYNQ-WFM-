@@ -14,51 +14,6 @@ import { pushTo } from '../services/notify';
 const prisma = new PrismaClient();
 export const orderRouter = Router();
 
-// "Find a Captain" directory — captains from OTHER merchants who opted in to be
-// hired. Pure discovery: returns contact + rating + distance so the manager can
-// call/WhatsApp them directly. No assignment, no money, no commission here.
-orderRouter.get('/captains/available', requireManager, async (req, res) => {
-  const rid = req.auth!.restaurantId;
-  const shop = await prisma.restaurant.findUnique({
-    where: { id: rid }, select: { shopLat: true, shopLng: true },
-  });
-
-  const captains = await prisma.driver.findMany({
-    where: { availableForHire: true, restaurantId: { not: rid } },
-    select: {
-      id: true, name: true, phone: true, city: true, vehicle: true,
-      currentLat: true, currentLng: true, status: true,
-    },
-  });
-
-  // Average rating per captain.
-  const ratings = await prisma.order.groupBy({
-    by: ['driverId'],
-    where: { rating: { not: null }, driverId: { in: captains.map((c) => c.id) } },
-    _avg: { rating: true }, _count: { rating: true },
-  });
-  const rBy = new Map(ratings.map((r) => [r.driverId, { avg: r._avg.rating, count: r._count.rating }]));
-
-  const km = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
-    const R = 6371, toRad = (d: number) => (d * Math.PI) / 180;
-    const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
-    const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(s));
-  };
-
-  const out = captains.map((c) => ({
-    id: c.id, name: c.name, phone: c.phone, city: c.city, vehicle: c.vehicle,
-    online: c.status !== 'Offline',
-    rating: rBy.get(c.id)?.avg ?? null,
-    ratingCount: rBy.get(c.id)?.count ?? 0,
-    distanceKm: shop?.shopLat != null && c.currentLat != null
-      ? Math.round(km({ lat: shop.shopLat!, lng: shop.shopLng! }, { lat: c.currentLat!, lng: c.currentLng! }) * 10) / 10
-      : null,
-  })).sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9));
-
-  res.json(out);
-});
-
 // Onboarding: add a driver to the fleet (name + phone + PIN).
 orderRouter.post('/drivers', requireManager, async (req, res) => {
   const { name, phone, password } = req.body;
