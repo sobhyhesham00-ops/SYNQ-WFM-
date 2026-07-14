@@ -1,0 +1,117 @@
+// Meshwar — PostgreSQL schema (Prisma)
+// Run: npx prisma migrate dev --name init
+//
+// Design notes:
+//  - `Driver.currentLat/Lng` are denormalized "hot" columns updated on every
+//    location frame so the dashboard reads one row, not a scan of location_logs.
+//  - `LocationLog` is the append-only history table; it is the only unbounded
+//    table and is indexed for time-range route replay.
+//  - Money is stored in integer *piastres* (1 EGP = 100 piastres) to avoid
+//    floating-point rounding on cash reconciliation. Never use FLOAT for money.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// A tenant. Every driver, order and dashboard session belongs to one.
+model Restaurant {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  createdAt DateTime @default(now())
+
+  drivers Driver[]
+  orders  Order[]
+  users   ManagerUser[]
+}
+
+// Restaurant staff who log into the web dashboard (manager / cashier).
+model ManagerUser {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String     @default("manager") // manager | cashier
+  createdAt    DateTime   @default(now())
+
+  @@index([restaurantId])
+}
+
+enum DriverStatus {
+  Idle
+  Delivering
+  Offline
+}
+
+model Driver {
+  id           String       @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id])
+  name         String
+  phone        String
+  passwordHash String       // drivers log in with phone + PIN/password
+  status       DriverStatus @default(Offline)
+
+  // Hot columns: latest known position, updated on every location frame.
+  currentLat      Float?
+  currentLng      Float?
+  lastSeenAt      DateTime?
+
+  createdAt DateTime @default(now())
+
+  orders       Order[]
+  locationLogs LocationLog[]
+
+  @@index([restaurantId, status])
+}
+
+enum OrderStatus {
+  Pending    // created, not yet assigned
+  Assigned   // given to a driver
+  PickedUp   // driver has food, en route
+  Delivered  // completed, cash collected
+  Cancelled
+}
+
+model Order {
+  id               String      @id @default(uuid())
+  restaurantId     String
+  restaurant       Restaurant  @relation(fields: [restaurantId], references: [id])
+  driverId         String?
+  driver           Driver?     @relation(fields: [driverId], references: [id])
+
+  customerAddress  String
+  customerPhone    String?
+  // Amount the driver must collect from the customer, in piastres.
+  totalCashToCollect Int
+  status           OrderStatus @default(Pending)
+
+  createdAt   DateTime  @default(now())
+  assignedAt  DateTime?
+  deliveredAt DateTime?
+  // Set true when the driver has physically handed this cash to the cashier.
+  settled     Boolean   @default(false)
+  settledAt   DateTime?
+
+  @@index([restaurantId, status])
+  @@index([driverId, status, settled])
+}
+
+model LocationLog {
+  id        BigInt   @id @default(autoincrement())
+  driverId  String
+  driver    Driver   @relation(fields: [driverId], references: [id])
+  lat       Float
+  lng       Float
+  // Device timestamp (when the fix was taken), not server receive time.
+  timestamp DateTime
+
+  @@index([driverId, timestamp])
+}

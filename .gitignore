@@ -1,8 +1,32 @@
+# Dependencies
 node_modules/
-build/
+**/node_modules/
+
+# Env / secrets
+.env
+.env.local
+*.local
+
+# Build output
 dist/
-coverage/
+build/
+backend/dist/
+dashboard/dist/
+
+# Prisma
+backend/prisma/*.db
+
+# Flutter / Dart
+mobile/flutter/.dart_tool/
+mobile/flutter/.flutter-plugins
+mobile/flutter/.flutter-plugins-dependencies
+mobile/flutter/build/
+mobile/flutter/.pub-cache/
+mobile/flutter/.pub/
+mobile/flutter/ios/Pods/
+
+# Editor / OS
 .DS_Store
+.idea/
+.vscode/
 *.log
-.env*
-!.env.example

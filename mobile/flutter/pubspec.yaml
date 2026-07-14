@@ -1,0 +1,31 @@
+name: meshwar_driver
+description: Meshwar driver app — background location tracking for private fleets.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Battery/background-proof tracking (foreground service on Android).
+  flutter_background_service: ^5.0.5
+  flutter_background_service_android: ^6.2.2
+  # GPS with distanceFilter so we don't spam fixes when stopped.
+  geolocator: ^12.0.0
+  # Persistent WebSocket to the backend.
+  web_socket_channel: ^3.0.1
+  # Local offline queue for location fixes when the network drops.
+  hive_flutter: ^1.1.0
+  # Store the driver JWT securely.
+  flutter_secure_storage: ^9.2.2
+  # Guide drivers through OEM battery/autostart allow-lists.
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
