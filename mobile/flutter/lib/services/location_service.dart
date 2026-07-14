@@ -20,6 +20,8 @@ import 'package:flutter_background_service_android/flutter_background_service_an
 import 'package:geolocator/geolocator.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter/widgets.dart';
+import 'auth_store.dart';
 
 const _flushSeconds = 20; // send one frame every 20s
 const _minMovementMeters = 40; // ignore jitter smaller than this
@@ -130,6 +132,8 @@ void onServiceStart(ServiceInstance service) async {
 }
 
 Future<String> _readToken() async {
-  // Read the JWT you stored at login (flutter_secure_storage in real app).
-  return const String.fromEnvironment('DRIVER_TOKEN', defaultValue: '');
+  // The background isolate needs plugins registered before reading storage.
+  DartPluginRegistrant.ensureInitialized();
+  final token = await AuthStore.token();
+  return token ?? const String.fromEnvironment('DRIVER_TOKEN', defaultValue: '');
 }

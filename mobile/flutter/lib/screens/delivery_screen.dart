@@ -17,7 +17,7 @@ class DeliveryScreen extends StatefulWidget {
     this.initialStatus = 'Assigned',
   });
 
-  final OrderApi api;
+  final DriverApi api;
   final String orderId;
   final String address;
   final double cashEGP;

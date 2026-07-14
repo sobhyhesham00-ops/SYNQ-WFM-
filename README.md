@@ -19,6 +19,17 @@ actually work here — see [`docs/EGYPT-MARKET.md`](docs/EGYPT-MARKET.md).
 |---|---|---|
 | ![AR dashboard](docs/screenshots/i18n-restaurant-ar.png) | ![Pharmacy](docs/screenshots/i18n-pharmacy-ar.png) | ![Customer](docs/screenshots/i18n-customer-ar.png) |
 
+| Merchant signup — business-type picker | Ramadan iftar-rush banner (live countdown) |
+|---|---|
+| ![Signup](docs/screenshots/signup.png) | ![Ramadan](docs/screenshots/ramadan.png) |
+
+**Self-service signup:** merchants create their own business, pick a vertical,
+and are logged straight in. **Ramadan mode:** a 🌙 toggle shows a live countdown
+to iftar and turns into a red "rush" alert within 2 hours of maghrib — Egypt's
+delivery peak — so managers get drivers ready. The **driver app** logs in
+against the real API (phone + PIN → JWT in secure storage) and loads its live
+orders, earnings, and delivery flow from the backend.
+
 ## Screenshots
 
 The dashboard running against the real backend (Postgres + WebSocket). Street

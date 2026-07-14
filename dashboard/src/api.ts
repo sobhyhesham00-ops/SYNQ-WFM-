@@ -8,7 +8,12 @@ export interface Driver {
   currentLat: number | null; currentLng: number | null; lastSeenAt: string | null;
 }
 export type BusinessType = 'Restaurant' | 'Takeaway' | 'Pharmacy' | 'Grocery' | 'Minimarket' | 'Kiosk' | 'Other';
-export interface Business { name: string; businessType: BusinessType }
+export const BUSINESS_TYPES: BusinessType[] =
+  ['Restaurant', 'Takeaway', 'Pharmacy', 'Grocery', 'Minimarket', 'Kiosk', 'Other'];
+export interface Business {
+  name: string; businessType: BusinessType;
+  ramadanMode?: boolean; iftarTime?: string | null;
+}
 
 export interface Order {
   id: string; customerAddress: string; totalCashToCollect: number;
@@ -33,6 +38,18 @@ export const api = {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('login failed')))),
+
+  register: (body: {
+    businessName: string; businessType: BusinessType; phone?: string;
+    managerName: string; email: string; password: string;
+  }) =>
+    fetch(`${API_BASE}/api/auth/manager/register`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json().catch(() => ({}))).error || 'signup failed')))),
+
+  updateBusiness: (token: string, patch: { ramadanMode?: boolean; iftarTime?: string | null }) =>
+    req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),
 
   state: (token: string): Promise<{ business: Business; drivers: Driver[]; orders: Order[] }> =>
     req('/api/state', token),

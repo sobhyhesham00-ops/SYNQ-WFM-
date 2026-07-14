@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../i18n.dart';
+import '../services/api_client.dart';
+import '../services/auth_store.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,15 +16,24 @@ class _LoginScreenState extends State<LoginScreen> {
   final _phone = TextEditingController(text: '01000000001');
   final _pin = TextEditingController(text: '1234');
   bool _loading = false;
+  String? _error;
 
   Future<void> _submit() async {
-    setState(() => _loading = true);
-    // TODO: POST /api/auth/driver/login -> save JWT via flutter_secure_storage.
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen(driverName: 'Mahmoud')),
-    );
+    setState(() { _loading = true; _error = null; });
+    try {
+      final res = await DriverApi.login(_phone.text.trim(), _pin.text.trim());
+      final token = res['token'] as String;
+      final name = (res['name'] as String?) ?? 'Driver';
+      await AuthStore.save(token, name);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => HomeScreen(token: token, driverName: name)),
+      );
+    } catch (_) {
+      if (mounted) setState(() => _error = tr('invalidCreds'));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -60,6 +71,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 12),
                 TextField(controller: _pin, obscureText: true, keyboardType: TextInputType.number,
                   decoration: _dec(tr('pin'))),
+                if (_error != null) Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(_error!, style: const TextStyle(color: MeshwarColors.danger, fontSize: 13)),
+                ),
                 const SizedBox(height: 18),
                 FilledButton(
                   onPressed: _loading ? null : _submit,

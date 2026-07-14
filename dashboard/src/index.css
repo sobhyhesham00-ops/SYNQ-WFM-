@@ -97,6 +97,27 @@ body {
   font-size: 12px; cursor: pointer; padding: 0; white-space: nowrap; text-decoration: none; }
 .link-btn:hover { text-decoration: underline; }
 
+/* signup business-type picker */
+.type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 2px 0 4px; }
+.type-chip { border: 1px solid var(--line); background: #fbfaff; border-radius: 14px; cursor: pointer;
+  padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; color: var(--ink); }
+.type-chip:hover { border-color: var(--brand-2); }
+.type-chip.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, #fff);
+  color: var(--brand); box-shadow: var(--shadow-sm); }
+
+/* ramadan banner + moon toggle */
+.moon-on { background: #2a2350 !important; box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 50%, transparent); }
+.ramadan-banner { display: flex; align-items: center; gap: 10px; border-radius: 16px; padding: 12px 14px;
+  font-weight: 700; font-size: 13px; color: #fff;
+  background: linear-gradient(135deg, #2a2350, #4a3a86); box-shadow: var(--shadow-sm); }
+.ramadan-banner.rush { background: linear-gradient(135deg, #7a1f3d, #b03a52); animation: rushpulse 2s ease-in-out infinite; }
+@keyframes rushpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(224,57,70,.35); } 50% { box-shadow: 0 0 0 6px rgba(224,57,70,0); } }
+@media (prefers-reduced-motion: reduce) { .ramadan-banner.rush { animation: none; } }
+.ramadan-moon { font-size: 18px; }
+.ramadan-time { font-variant-numeric: tabular-nums; background: rgba(255,255,255,.18);
+  padding: 3px 10px; border-radius: 999px; }
+
 .biz-badge { font-size: 11px; font-weight: 700; color: var(--brand);
   background: color-mix(in srgb, var(--brand) 12%, transparent); padding: 3px 9px;
   border-radius: 999px; margin-inline-start: 8px; }

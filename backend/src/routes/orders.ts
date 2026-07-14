@@ -12,6 +12,20 @@ import { requireManager, requireDriver } from '../services/auth';
 const prisma = new PrismaClient();
 export const orderRouter = Router();
 
+// Update business settings (Ramadan mode + iftar time).
+orderRouter.patch('/business', requireManager, async (req, res) => {
+  const { ramadanMode, iftarTime } = req.body;
+  const data: { ramadanMode?: boolean; iftarTime?: string | null } = {};
+  if (typeof ramadanMode === 'boolean') data.ramadanMode = ramadanMode;
+  if (iftarTime !== undefined) data.iftarTime = iftarTime || null;
+  const biz = await prisma.restaurant.update({
+    where: { id: req.auth!.restaurantId },
+    data,
+    select: { name: true, businessType: true, ramadanMode: true, iftarTime: true },
+  });
+  res.json(biz);
+});
+
 // Route replay: a driver's location history for the map polyline.
 // Optional ?from=ISO&to=ISO time window; defaults to the last 4 hours.
 orderRouter.get('/drivers/:id/route', requireManager, async (req, res) => {
@@ -35,7 +49,7 @@ orderRouter.get('/state', requireManager, async (req, res) => {
   const [business, drivers, orders] = await Promise.all([
     prisma.restaurant.findUnique({
       where: { id: rid },
-      select: { name: true, businessType: true },
+      select: { name: true, businessType: true, ramadanMode: true, iftarTime: true },
     }),
     prisma.driver.findMany({
       where: { restaurantId: rid },

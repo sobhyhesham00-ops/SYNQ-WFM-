@@ -50,6 +50,20 @@ const en: Dict = {
   'biz.Minimarket': 'Mini-market',
   'biz.Kiosk': 'Kiosk',
   'biz.Other': 'Store',
+  // signup
+  createAccount: 'Create account',
+  haveAccount: 'Have an account? Sign in',
+  newHere: 'New here? Create an account',
+  businessName: 'Business name',
+  businessTypeQ: 'What kind of business?',
+  managerName: 'Your name',
+  phoneOptional: 'Business phone (optional)',
+  signUp: 'Create business',
+  // ramadan
+  ramadanOn: 'Ramadan mode on',
+  iftarIn: 'Iftar in {time} · get drivers ready 🌙',
+  iftarPassed: 'Ramadan Kareem 🌙 · iftar time',
+  iftarTimeLabel: 'Iftar time',
 };
 
 const ar: Dict = {
@@ -94,6 +108,20 @@ const ar: Dict = {
   'biz.Minimarket': 'سوبر ماركت',
   'biz.Kiosk': 'كشك',
   'biz.Other': 'محل',
+  // signup
+  createAccount: 'إنشاء حساب',
+  haveAccount: 'عندك حساب؟ سجّل دخول',
+  newHere: 'أول مرة؟ اعمل حساب',
+  businessName: 'اسم المحل',
+  businessTypeQ: 'نوع النشاط إيه؟',
+  managerName: 'اسمك',
+  phoneOptional: 'تليفون المحل (اختياري)',
+  signUp: 'إنشاء المحل',
+  // ramadan
+  ramadanOn: 'وضع رمضان شغّال',
+  iftarIn: 'فاضل على الفطار {time} · جهّز السواقين 🌙',
+  iftarPassed: 'رمضان كريم 🌙 · وقت الفطار',
+  iftarTimeLabel: 'موعد الفطار',
 };
 
 const dicts: Record<Lang, Dict> = { en, ar };

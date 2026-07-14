@@ -10,6 +10,8 @@ void toggleLang() => langNotifier.value = langNotifier.value == 'ar' ? 'en' : 'a
 const Map<String, Map<String, String>> _dict = {
   'en': {
     'signIn': 'Sign in',
+    'invalidCreds': 'Wrong phone or PIN',
+    'noOrders': 'No active orders right now',
     'driverSignIn': 'Driver sign in',
     'phone': 'Phone number',
     'pin': 'PIN',
@@ -35,6 +37,8 @@ const Map<String, Map<String, String>> _dict = {
   },
   'ar': {
     'signIn': 'دخول',
+    'invalidCreds': 'التليفون أو الرقم السري غلط',
+    'noOrders': 'مفيش طلبات دلوقتي',
     'driverSignIn': 'دخول السواق',
     'phone': 'رقم التليفون',
     'pin': 'الرقم السري',

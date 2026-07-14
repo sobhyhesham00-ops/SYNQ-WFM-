@@ -3,6 +3,8 @@ import { api, egp, WS_BASE, API_BASE, type Driver, type Order, type Business } f
 import { LiveMap } from './LiveMap';
 import { useTracking } from './useTracking';
 import { Login } from './Login';
+import { Signup } from './Signup';
+import { RamadanBanner } from './RamadanBanner';
 import { useLang } from './i18n';
 
 const initials = (name: string) =>
@@ -17,7 +19,18 @@ export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [route, setRoute] = useState<{ lat: number; lng: number }[] | null>(null);
   const [replayDriver, setReplayDriver] = useState<string | null>(null);
+  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const { pins, drawers } = useTracking(WS_BASE, token ?? '');
+
+  async function toggleRamadan() {
+    if (!business) return;
+    const next = !business.ramadanMode;
+    const b = await api.updateBusiness(token!, {
+      ramadanMode: next,
+      iftarTime: business.iftarTime || '18:05',
+    });
+    setBusiness((prev) => (prev ? { ...prev, ...b } : b));
+  }
 
   async function toggleReplay(driverId: string) {
     if (replayDriver === driverId) { setRoute(null); setReplayDriver(null); return; }
@@ -54,7 +67,11 @@ export default function App() {
   const activeCount = drivers.filter((d) => d.status !== 'Offline').length;
   const isPharmacy = business?.businessType === 'Pharmacy';
 
-  if (!token) return <Login onLogin={onLogin} />;
+  if (!token) {
+    return authView === 'signup'
+      ? <Signup onLogin={onLogin} onSwitch={() => setAuthView('login')} />
+      : <Login onLogin={onLogin} onSwitch={() => setAuthView('signup')} />;
+  }
 
   return (
     <div className="app">
@@ -74,12 +91,15 @@ export default function App() {
             {business && <span className="biz-badge">{t(`biz.${business.businessType}`)}</span>}
           </div>
           <div className="row" style={{ gap: 8 }}>
+            <button className={`ghost-btn ${business?.ramadanMode ? 'moon-on' : ''}`} title="Ramadan mode" onClick={toggleRamadan}>🌙</button>
             <button className="ghost-btn" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}>
               {lang === 'ar' ? 'EN' : 'ع'}
             </button>
             <button className="ghost-btn" onClick={logout}>{name || t('logout')} ⏻</button>
           </div>
         </div>
+
+        {business?.ramadanMode && <RamadanBanner iftarTime={business.iftarTime ?? '18:05'} />}
 
         {/* Hero: fleet cash to collect */}
         <div className="hero">

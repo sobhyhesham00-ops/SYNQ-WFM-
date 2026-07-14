@@ -1,5 +1,5 @@
 // Driver home — fintech-styled: gradient "cash to hand over" hero, shift toggle,
-// and today's order cards.  (Design mirrors the shared reference.)
+// and today's live orders (loaded from the backend).
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../theme.dart';
@@ -9,30 +9,38 @@ import '../i18n.dart';
 import 'delivery_screen.dart';
 import 'earnings_screen.dart';
 
-// In the real app base URL + JWT come from config + secure storage (set at login).
-const _apiBase = String.fromEnvironment('API_BASE', defaultValue: 'https://api.meshwar.app');
-const _driverToken = String.fromEnvironment('DRIVER_TOKEN', defaultValue: '');
-
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.driverName});
+  const HomeScreen({super.key, required this.token, required this.driverName});
+  final String token;
   final String driverName;
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late final DriverApi _api = DriverApi(widget.token);
   bool _onShift = false;
+  List<DriverOrder> _orders = [];
+  bool _loading = true;
 
-  // In the real app these come from GET /api/state filtered to this driver.
-  final _orders = const [
-    ('30 Kasr El Nil St', 200.0, 'PickedUp'),
-    ('12 Sherif St, Downtown', 125.0, 'Delivered'),
-    ('8 Talaat Harb Sq', 80.0, 'Delivered'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final orders = await _api.myOrders();
+      if (mounted) setState(() { _orders = orders; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   double get _toHandOver => _orders
-      .where((o) => o.$3 == 'Delivered')
-      .fold(0.0, (s, o) => s + o.$2);
+      .where((o) => o.status == 'Delivered')
+      .fold(0.0, (s, o) => s + (double.tryParse(o.cashEGP) ?? 0));
 
   Future<void> _ensurePermissions() async {
     await Permission.locationWhenInUse.request();
@@ -43,120 +51,135 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final deliveredCount = _orders.where((o) => o.status == 'Delivered').length;
     return Scaffold(
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(18),
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(children: [
-                  Container(width: 30, height: 30,
-                    decoration: BoxDecoration(gradient: MeshwarColors.brandGradient,
-                      borderRadius: BorderRadius.circular(9))),
-                  const SizedBox(width: 10),
-                  const Text('Meshwar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
-                  const SizedBox(width: 6),
-                  const Text('مشوار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: MeshwarColors.muted)),
-                ]),
-                Row(children: [
-                  IconButton(
-                    tooltip: 'My cash',
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const EarningsScreen())),
-                    icon: const Icon(Icons.account_balance_wallet_outlined, color: MeshwarColors.brand),
-                  ),
-                  CircleAvatar(backgroundColor: Colors.white,
-                    child: Text(widget.driverName.characters.first,
-                      style: const TextStyle(color: MeshwarColors.brand, fontWeight: FontWeight.w700))),
-                ]),
-              ],
-            ),
-            const SizedBox(height: 18),
-
-            // Hero: cash to hand over to cashier.
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                gradient: MeshwarColors.brandGradient,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: RefreshIndicator(
+          onRefresh: _load,
+          child: ListView(
+            padding: const EdgeInsets.all(18),
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('CASH TO HAND OVER',
-                    style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 12, letterSpacing: .5)),
-                  const SizedBox(height: 8),
-                  Text('${_toHandOver.toStringAsFixed(2)} EGP',
-                    style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w800)),
-                  Text('${_orders.where((o) => o.$3 == 'Delivered').length} delivered today',
-                    style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 12)),
+                  Row(children: [
+                    Container(width: 30, height: 30,
+                      decoration: BoxDecoration(gradient: MeshwarColors.brandGradient,
+                        borderRadius: BorderRadius.circular(9))),
+                    const SizedBox(width: 10),
+                    const Text('Meshwar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+                    const SizedBox(width: 6),
+                    const Text('مشوار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: MeshwarColors.muted)),
+                  ]),
+                  Row(children: [
+                    TextButton(onPressed: () => toggleLang(),
+                      child: Text(langNotifier.value == 'ar' ? 'EN' : 'ع',
+                        style: const TextStyle(color: MeshwarColors.brand, fontWeight: FontWeight.w700))),
+                    IconButton(
+                      tooltip: tr('myCash'),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => EarningsScreen(token: widget.token))),
+                      icon: const Icon(Icons.account_balance_wallet_outlined, color: MeshwarColors.brand),
+                    ),
+                    CircleAvatar(backgroundColor: Colors.white,
+                      child: Text(widget.driverName.characters.first,
+                        style: const TextStyle(color: MeshwarColors.brand, fontWeight: FontWeight.w700))),
+                  ]),
                 ],
               ),
-            ),
-            const SizedBox(height: 18),
+              const SizedBox(height: 18),
 
-            // Shift toggle.
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: _onShift ? MeshwarColors.danger : null,
+              // Hero: cash to hand over to cashier.
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  gradient: MeshwarColors.brandGradient,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(tr('cashInHand'),
+                      style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 12, letterSpacing: .5)),
+                    const SizedBox(height: 8),
+                    Text('${_toHandOver.toStringAsFixed(2)} EGP',
+                      style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w800)),
+                    Text(tr('deliveriesToday', vars: {'n': '$deliveredCount'}),
+                      style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 12)),
+                  ],
+                ),
               ),
-              onPressed: () async {
-                if (!_onShift) { await _ensurePermissions(); await startShift(); }
-                else { endShift(); }
-                setState(() => _onShift = !_onShift);
-              },
-              child: Text(_onShift ? tr('endShift') : tr('startShift')),
-            ),
-            if (_onShift)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.circle, color: MeshwarColors.ok, size: 10),
-                  const SizedBox(width: 6),
-                  Text(tr('locationOn'), style: const TextStyle(color: MeshwarColors.muted, fontSize: 12)),
-                ]),
-              ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
-            Text(tr('myOrders'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            const SizedBox(height: 10),
-            ..._orders.asMap().entries.map((e) {
-              final i = e.key;
-              final o = e.value;
-              return Padding(
+              // Shift toggle.
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: _onShift ? MeshwarColors.danger : null,
+                ),
+                onPressed: () async {
+                  if (!_onShift) { await _ensurePermissions(); await startShift(); }
+                  else { endShift(); }
+                  setState(() => _onShift = !_onShift);
+                },
+                child: Text(_onShift ? tr('endShift') : tr('startShift')),
+              ),
+              if (_onShift)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.circle, color: MeshwarColors.ok, size: 10),
+                    const SizedBox(width: 6),
+                    Text(tr('locationOn'), style: const TextStyle(color: MeshwarColors.muted, fontSize: 12)),
+                  ]),
+                ),
+              const SizedBox(height: 20),
+
+              Text(tr('myOrders'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              const SizedBox(height: 10),
+              if (_loading)
+                const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+              else if (_orders.isEmpty)
+                Padding(padding: const EdgeInsets.all(20),
+                  child: Center(child: Text(tr('noOrders'), style: const TextStyle(color: MeshwarColors.muted)))),
+              ..._orders.map((o) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(18),
-                  onTap: o.$3 == 'Delivered' ? null : () async {
+                  onTap: o.status == 'Delivered' ? null : () async {
                     await Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => DeliveryScreen(
-                        api: OrderApi(_apiBase, _driverToken),
-                        orderId: 'demo-order-$i',
-                        address: o.$1,
-                        cashEGP: o.$2,
-                        initialStatus: o.$3,
+                        api: _api,
+                        orderId: o.id,
+                        address: o.address,
+                        cashEGP: double.tryParse(o.cashEGP) ?? 0,
+                        initialStatus: o.status,
                       ),
                     ));
+                    _load();
                   },
                   child: MeshwarCard(
                     child: Row(children: [
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(o.$1, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        Text('${o.$2.toStringAsFixed(0)} EGP',
-                          style: const TextStyle(color: MeshwarColors.muted, fontSize: 13)),
+                        Row(children: [
+                          Flexible(child: Text(o.address, style: const TextStyle(fontWeight: FontWeight.w700))),
+                          if (o.requiresPrescription)
+                            const Padding(padding: EdgeInsets.only(left: 6),
+                              child: Text('℞', style: TextStyle(color: MeshwarColors.danger, fontWeight: FontWeight.w800))),
+                        ]),
+                        if (o.landmark != null && o.landmark!.isNotEmpty)
+                          Text('📍 ${o.landmark}', style: const TextStyle(color: MeshwarColors.muted, fontSize: 12)),
+                        Text('${o.cashEGP} EGP', style: const TextStyle(color: MeshwarColors.muted, fontSize: 13)),
                       ])),
-                      _StatusChip(o.$3),
-                      if (o.$3 != 'Delivered')
+                      _StatusChip(o.status),
+                      if (o.status != 'Delivered')
                         const Padding(padding: EdgeInsets.only(left: 6),
                           child: Icon(Icons.chevron_right, color: MeshwarColors.muted)),
                     ]),
                   ),
                 ),
-              );
-            }),
-          ],
+              )),
+            ],
+          ),
         ),
       ),
     );

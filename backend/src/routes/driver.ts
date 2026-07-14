@@ -11,6 +11,30 @@ export const driverRouter = Router();
 const egp = (piastres: number) =>
   (piastres / 100).toLocaleString('en-EG', { minimumFractionDigits: 2 });
 
+const egpNum = (piastres: number) => (piastres / 100).toFixed(2);
+
+// The logged-in driver's active + recent orders (mobile home screen).
+driverRouter.get('/driver/me/orders', requireDriver, async (req, res) => {
+  const driverId = req.auth!.driverId!;
+  const orders = await prisma.order.findMany({
+    where: { driverId, status: { in: ['Assigned', 'PickedUp', 'Delivered'] } },
+    orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+    select: {
+      id: true, customerAddress: true, customerPhone: true, landmark: true,
+      requiresPrescription: true, totalCashToCollect: true, status: true,
+    },
+  });
+  res.json(orders.map((o) => ({
+    id: o.id,
+    address: o.customerAddress,
+    phone: o.customerPhone,
+    landmark: o.landmark,
+    requiresPrescription: o.requiresPrescription,
+    cashEGP: egpNum(o.totalCashToCollect),
+    status: o.status,
+  })));
+});
+
 // Earnings / COD summary for the logged-in driver's current shift (today).
 //   collected  = cash from all delivered orders today
 //   handedOver = of that, what's already been settled with the cashier

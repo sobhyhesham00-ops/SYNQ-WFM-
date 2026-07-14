@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { api } from './api';
 import { useLang } from './i18n';
 
-export function Login({ onLogin }: { onLogin: (token: string, name: string) => void }) {
+export function Login({ onLogin, onSwitch }: {
+  onLogin: (token: string, name: string) => void;
+  onSwitch: () => void;
+}) {
   const { t, lang, setLang } = useLang();
   const [email, setEmail] = useState('manager@demo.eg');
   const [password, setPassword] = useState('password123');
@@ -32,6 +35,7 @@ export function Login({ onLogin }: { onLogin: (token: string, name: string) => v
           placeholder={t('password')} onKeyDown={(e) => e.key === 'Enter' && submit()} />
         {err && <div className="err">{err}</div>}
         <button className="pill-btn" onClick={submit}>{t('signIn')}</button>
+        <button className="link-btn" style={{ textAlign: 'center' }} onClick={onSwitch}>{t('newHere')}</button>
       </div>
     </div>
   );
