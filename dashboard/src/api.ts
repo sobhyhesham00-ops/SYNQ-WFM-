@@ -58,8 +58,11 @@ export const api = {
   updateBusiness: (token: string, patch: { ramadanMode?: boolean; iftarTime?: string | null; plan?: PlanTier }) =>
     req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),
 
-  checkout: (token: string, plan: PlanTier): Promise<{ plan: PlanTier; reference?: string; amountEGP?: string; free?: boolean; contactSales?: boolean }> =>
-    req('/api/billing/checkout', token, { method: 'POST', body: JSON.stringify({ plan }) }),
+  checkout: (token: string, plan: PlanTier, method: 'fawry' | 'vodafone' | 'instapay'): Promise<{
+    plan: PlanTier; method?: string; reference?: string; amountEGP?: string; payTo?: string | null;
+    free?: boolean; contactSales?: boolean;
+  }> =>
+    req('/api/billing/checkout', token, { method: 'POST', body: JSON.stringify({ plan, method }) }),
   confirmPayment: (token: string, plan: PlanTier) =>
     req('/api/billing/confirm', token, { method: 'POST', body: JSON.stringify({ plan }) }),
 

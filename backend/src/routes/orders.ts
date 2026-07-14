@@ -115,16 +115,26 @@ orderRouter.get('/analytics', requireManager, async (req, res) => {
 // --- Billing (Fawry-style stub; no real PSP wired) ---
 // Start a checkout: returns a payment reference + amount to pay out-of-band.
 // In production a Fawry webhook would confirm; here /confirm simulates it.
+// El Kaptin's own receiving accounts (where merchants send the fee). Placeholders.
+const PAYEES = { vodafone: '010 0055 5777', instapay: 'elkaptin@instapay' };
+
 orderRouter.post('/billing/checkout', requireManager, async (req, res) => {
   const plan = req.body?.plan as Plan;
+  const method = (req.body?.method as 'fawry' | 'vodafone' | 'instapay') || 'fawry';
   if (!(plan in PLAN_PRICE)) return res.status(400).json({ error: 'bad plan' });
   if (plan === 'Free') { // downgrade is instant, no payment
     await prisma.restaurant.update({ where: { id: req.auth!.restaurantId }, data: { plan } });
     return res.json({ plan, free: true });
   }
   if (plan === 'Chain') return res.json({ plan, contactSales: true });
-  const reference = String(Math.floor(100000000 + Math.random() * 899999999)); // fake Fawry code
-  res.json({ plan, reference, amountEGP: (PLAN_PRICE[plan] / 100).toFixed(2) });
+
+  // Money moves through the licensed wallet/PSP — we only issue a reference.
+  const reference = String(Math.floor(100000000 + Math.random() * 899999999));
+  const amountEGP = (PLAN_PRICE[plan] / 100).toFixed(2);
+  res.json({
+    plan, method, amountEGP, reference,
+    payTo: method === 'fawry' ? null : PAYEES[method], // wallet number / InstaPay handle
+  });
 });
 
 // Confirm payment (stub for the Fawry webhook) → activate the plan.
