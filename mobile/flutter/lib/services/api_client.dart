@@ -67,12 +67,16 @@ class DriverApi {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
-  Future<void> setStatus(String orderId, String status) async {
+  /// Update order status. Delivered requires the customer's 4-digit [otp].
+  Future<void> setStatus(String orderId, String status, {String? otp}) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/orders/$orderId/status'),
       headers: _h,
-      body: jsonEncode({'status': status}), // 'PickedUp' | 'Delivered'
+      body: jsonEncode({'status': status, if (otp != null) 'otp': otp}),
     );
+    if (res.statusCode == 400 && res.body.contains('wrong_otp')) {
+      throw Exception('wrong_otp');
+    }
     if (res.statusCode >= 400) throw Exception('setStatus failed: ${res.body}');
   }
 }

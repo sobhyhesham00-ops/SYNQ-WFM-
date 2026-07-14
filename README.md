@@ -40,6 +40,18 @@ driver → create first order) instead of an empty page. **Analytics:** a live
 **Smart assignment:** the assign dropdown ranks idle drivers by distance from
 the shop (Haversine over live GPS) and flags the 🎯 nearest one.
 
+| Delivery handover code (customer) | Post-delivery rating (customer) |
+|---|---|
+| ![Delivery code](docs/screenshots/proof-code.png) | ![Rating](docs/screenshots/proof-rating.png) |
+
+**Proof of delivery:** every assignment mints a 4-digit code shown on the
+customer's tracking page; the driver must enter it to mark *Delivered* — cutting
+COD "I never got it" disputes. **Ratings:** the customer rates the driver after
+delivery; the average shows on each driver's cash-drawer card. **Cash report:**
+one-click CSV export of the week's deliveries for the owner's books. **Push:**
+FCM plumbing (device-token endpoint + notify service) pings the driver on a new
+assignment — set `FCM_SERVER_KEY` to go live; it no-ops safely without one.
+
 ## Screenshots
 
 The dashboard running against the real backend (Postgres + WebSocket). Street

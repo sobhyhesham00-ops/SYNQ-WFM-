@@ -147,7 +147,10 @@ export default function App() {
           : <Analytics token={token} refreshKey={refreshKey} />}
 
         {/* Cash drawer per driver */}
-        <div className="section-head"><h3>{t('cashDrawer')}</h3><a>{t('endOfShift')}</a></div>
+        <div className="section-head">
+          <h3>{t('cashDrawer')}</h3>
+          <button className="link-btn" onClick={() => api.exportCashCsv(token)}>⬇ {t('exportCsv')}</button>
+        </div>
         {drivers.map((d) => {
           const drawer = drawers[d.id];
           const seedOwed = orders
@@ -159,7 +162,11 @@ export default function App() {
               <div className="row">
                 <div className="avatar">{initials(d.name)}</div>
                 <div className="grow">
-                  <div className="name">{d.name}</div>
+                  <div className="name">{d.name}
+                    {d.rating != null && (
+                      <span className="rating-badge">⭐ {d.rating.toFixed(1)}{d.ratingCount ? ` (${d.ratingCount})` : ''}</span>
+                    )}
+                  </div>
                   <div className="subtle">{d.phone}</div>
                 </div>
                 <span className={`chip ${d.status}`}>{t(`status.${d.status}`)}</span>

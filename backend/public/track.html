@@ -39,6 +39,12 @@
   .btn{flex:1;text-align:center;text-decoration:none;font-weight:700;font-size:14px;padding:12px;border-radius:999px;border:1px solid var(--line);color:var(--ink);background:#fff}
   .btn.primary{background:var(--grad);color:#fff;border:none}
   .muted-note{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
+  .otp-card{margin-top:16px;text-align:center;background:#f0edff;border:1px dashed var(--brand);border-radius:16px;padding:16px}
+  .otp-code{font-size:34px;font-weight:800;letter-spacing:10px;color:var(--brand);font-variant-numeric:tabular-nums}
+  .rate-card{margin-top:16px;text-align:center}
+  .stars{font-size:34px;letter-spacing:6px;cursor:pointer;margin-top:6px}
+  .stars span{opacity:.3;transition:opacity .1s}
+  .stars span.on{opacity:1}
 </style>
 </head>
 <body>
@@ -69,6 +75,18 @@
         <b id="cash">—</b>
       </div>
 
+      <!-- Handover code: customer reads it to the driver to confirm delivery -->
+      <div class="otp-card" id="otpCard" style="display:none">
+        <div class="subtle" id="otpLabel"></div>
+        <div class="otp-code" id="otpCode">----</div>
+      </div>
+
+      <!-- Post-delivery rating -->
+      <div class="rate-card" id="rateCard" style="display:none">
+        <div class="subtle" id="rateLabel"></div>
+        <div class="stars" id="stars"></div>
+      </div>
+
       <div class="actions" id="actions" style="display:none">
         <a class="btn primary" id="callBtn" href="#">📞 <span></span></a>
         <a class="btn" id="waBtn" href="#" target="_blank">🟢 WhatsApp</a>
@@ -87,12 +105,14 @@
       stages: {Pending:'وصل الطلب', Assigned:'بيتجهّز', PickedUp:'السواق في الطريق ليك', Delivered:'اتسلّم', Cancelled:'اتلغى'},
       yourDriver: 'السواق بتاعك', live:'مباشر · بيتحدّث دلوقتي',
       pay:'ادفع للسواق كاش', notFound:'الطلب مش موجود', callStore:'اتصل بالمحل', langBtn:'English',
+      otpLabel:'قول الكود ده للسواق وقت الاستلام', rateLabel:'قيّم السواق', thanks:'شكراً لتقييمك 🌟',
     },
     en: {
       steps: ['Received','Preparing','On the way','Delivered'],
       stages: {Pending:'Order received', Assigned:'Preparing your order', PickedUp:'On the way', Delivered:'Delivered', Cancelled:'Cancelled'},
       yourDriver: 'your driver', live:'Live · updated just now',
       pay:'Pay the driver (cash)', notFound:'Order not found', callStore:'Call the store', langBtn:'العربية',
+      otpLabel:'Give this code to the driver at handover', rateLabel:'Rate your driver', thanks:'Thanks for rating 🌟',
     },
   };
   let lang = (navigator.language||'').startsWith('ar') ? 'ar' : 'ar'; // Arabic-first
@@ -106,16 +126,19 @@
     document.querySelectorAll('.step span').forEach((s,i)=> s.textContent = I18N[lang].steps[i]);
     document.getElementById('payLabel').textContent = I18N[lang].pay;
     document.querySelector('#callBtn span').textContent = I18N[lang].callStore;
+    document.getElementById('otpLabel').textContent = I18N[lang].otpLabel;
+    document.getElementById('rateLabel').textContent = I18N[lang].rateLabel;
     if (last) render(last);
   }
   document.getElementById('lang').onclick = () => { lang = lang==='ar'?'en':'ar'; applyLang(); };
 
-  function initMap(lat,lng){ if(map) return;
+  function initMap(lat,lng){ if(map || typeof maplibregl === 'undefined') return;
     map = new maplibregl.Map({ container:'map',
       style:{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap'}},
       layers:[{id:'bg',type:'background',paint:{'background-color':'#e7ebf6'}},{id:'osm',type:'raster',source:'osm'}]}, center:[lng,lat], zoom:14 });
   }
   function setDriver(lat,lng){ initMap(lat,lng);
+    if(!map) return; // map unavailable (blocked/slow) — skip, keep rest of UI
     if(!marker){ const el=document.createElement('div');
       el.style.cssText='width:20px;height:20px;border-radius:50%;background:#7c5cff;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.35)';
       marker=new maplibregl.Marker({element:el}); }
@@ -145,6 +168,47 @@
       const msg = encodeURIComponent((lang==='ar'?'بخصوص طلبي من ':'About my order from ') + d.businessName);
       document.getElementById('waBtn').href = 'https://wa.me/' + d.businessPhone.replace(/[^0-9]/g,'') + '?text=' + msg;
     }
+
+    // Handover code while in flight.
+    document.getElementById('otpCard').style.display = d.deliveryCode ? 'block' : 'none';
+    if (d.deliveryCode) document.getElementById('otpCode').textContent = d.deliveryCode;
+
+    // Rating after delivery.
+    renderStars(d);
+  }
+
+  function renderStars(d) {
+    const card = document.getElementById('rateCard');
+    if (d.rating) { // already rated
+      card.style.display = 'block';
+      document.getElementById('rateLabel').textContent = I18N[lang].thanks;
+      paintStars(d.rating, false);
+    } else if (d.canRate) {
+      card.style.display = 'block';
+      document.getElementById('rateLabel').textContent = I18N[lang].rateLabel;
+      paintStars(0, true);
+    } else {
+      card.style.display = 'none';
+    }
+  }
+  function paintStars(value, interactive) {
+    const wrap = document.getElementById('stars');
+    wrap.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const s = document.createElement('span');
+      s.textContent = '⭐'; if (i <= value) s.className = 'on';
+      if (interactive) s.onclick = () => submitRating(i);
+      wrap.appendChild(s);
+    }
+  }
+  async function submitRating(r) {
+    paintStars(r, false);
+    try {
+      await fetch('/api/track/' + token + '/rate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rating: r }),
+      });
+      document.getElementById('rateLabel').textContent = I18N[lang].thanks;
+    } catch (e) {}
   }
 
   async function poll(){

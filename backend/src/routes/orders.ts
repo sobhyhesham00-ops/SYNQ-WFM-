@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import { pushDashboardEvent } from '../ws/tracking';
 import { getDriverCashDrawer, settleDriverCash } from '../services/cashDrawer';
 import { requireManager, requireDriver } from '../services/auth';
+import { pushTo } from '../services/notify';
 
 const prisma = new PrismaClient();
 export const orderRouter = Router();
@@ -30,6 +31,35 @@ orderRouter.post('/drivers', requireManager, async (req, res) => {
   });
   pushDashboardEvent(req.auth!.restaurantId, { type: 'driver_added', driver });
   res.status(201).json(driver);
+});
+
+// Weekly cash report as CSV (for the owner's books). ?days=7 (default).
+orderRouter.get('/reports/cash.csv', requireManager, async (req, res) => {
+  const days = Math.min(Number(req.query.days) || 7, 90);
+  const since = new Date(Date.now() - days * 86400_000);
+  const orders = await prisma.order.findMany({
+    where: { restaurantId: req.auth!.restaurantId, status: 'Delivered', deliveredAt: { gte: since } },
+    orderBy: { deliveredAt: 'desc' },
+    select: {
+      deliveredAt: true, customerAddress: true, totalCashToCollect: true,
+      settled: true, rating: true, driver: { select: { name: true } },
+    },
+  });
+  const esc = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
+  const rows = [
+    ['date', 'driver', 'address', 'amount_egp', 'settled', 'rating'].join(','),
+    ...orders.map((o) => [
+      o.deliveredAt?.toISOString().slice(0, 10) ?? '',
+      esc(o.driver?.name ?? ''),
+      esc(o.customerAddress),
+      (o.totalCashToCollect / 100).toFixed(2),
+      o.settled ? 'yes' : 'no',
+      o.rating ?? '',
+    ].join(',')),
+  ];
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="meshwar-cash-${days}d.csv"`);
+  res.send(rows.join('\n'));
 });
 
 // Today's analytics for the dashboard strip.
@@ -113,7 +143,22 @@ orderRouter.get('/state', requireManager, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     }),
   ]);
-  res.json({ business, drivers, orders });
+
+  // Average customer rating per driver (from rated, delivered orders).
+  const ratings = await prisma.order.groupBy({
+    by: ['driverId'],
+    where: { restaurantId: rid, rating: { not: null } },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+  const ratingBy = new Map(ratings.map((r) => [r.driverId, { avg: r._avg.rating, count: r._count.rating }]));
+  const driversWithRating = drivers.map((d) => ({
+    ...d,
+    rating: ratingBy.get(d.id)?.avg ?? null,
+    ratingCount: ratingBy.get(d.id)?.count ?? 0,
+  }));
+
+  res.json({ business, drivers: driversWithRating, orders });
 });
 
 // Manager creates an order. Amount arrives in EGP; store as piastres.
@@ -137,21 +182,36 @@ orderRouter.post('/orders', requireManager, async (req, res) => {
 // Manager assigns an order to a driver.
 orderRouter.post('/orders/:id/assign', requireManager, async (req, res) => {
   const { driverId } = req.body;
+  const otp = String(Math.floor(1000 + Math.random() * 9000)); // 4-digit handover code
   const order = await prisma.$transaction(async (tx) => {
     const o = await tx.order.update({
       where: { id: req.params.id },
-      data: { driverId, status: 'Assigned', assignedAt: new Date() },
+      data: { driverId, status: 'Assigned', assignedAt: new Date(), deliveryOtp: otp },
     });
     await tx.driver.update({ where: { id: driverId }, data: { status: 'Delivering' } });
     return o;
   });
+  // Ping the assigned driver's device (new job).
+  const driver = await prisma.driver.findUnique({ where: { id: driverId }, select: { fcmToken: true } });
+  pushTo([driver?.fcmToken], 'طلب جديد · New order', order.customerAddress);
   pushDashboardEvent(req.auth!.restaurantId, { type: 'order_assigned', order });
   res.json(order);
 });
 
 // Driver marks picked up / delivered from the app.
 orderRouter.post('/orders/:id/status', requireDriver, async (req, res) => {
-  const { status } = req.body as { status: 'PickedUp' | 'Delivered' };
+  const { status, otp } = req.body as { status: 'PickedUp' | 'Delivered'; otp?: string };
+
+  // Delivered requires the customer's handover code (anti-dispute proof).
+  if (status === 'Delivered') {
+    const existing = await prisma.order.findUnique({
+      where: { id: req.params.id }, select: { deliveryOtp: true },
+    });
+    if (existing?.deliveryOtp && existing.deliveryOtp !== String(otp ?? '').trim()) {
+      return res.status(400).json({ error: 'wrong_otp' });
+    }
+  }
+
   const order = await prisma.order.update({
     where: { id: req.params.id },
     data: {

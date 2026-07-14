@@ -6,6 +6,7 @@ export interface Driver {
   id: string; name: string; phone: string;
   status: 'Idle' | 'Delivering' | 'Offline';
   currentLat: number | null; currentLng: number | null; lastSeenAt: string | null;
+  rating?: number | null; ratingCount?: number;
 }
 export type BusinessType = 'Restaurant' | 'Takeaway' | 'Pharmacy' | 'Grocery' | 'Minimarket' | 'Kiosk' | 'Other';
 export const BUSINESS_TYPES: BusinessType[] =
@@ -60,6 +61,19 @@ export const api = {
     req('/api/drivers', token, { method: 'POST', body: JSON.stringify(d) }),
 
   analytics: (token: string): Promise<Analytics> => req('/api/analytics', token),
+
+  // Download the weekly cash report CSV (triggers a browser download).
+  async exportCashCsv(token: string, days = 7) {
+    const res = await fetch(`${API_BASE}/api/reports/cash.csv?days=${days}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `meshwar-cash-${days}d.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  },
 
   state: (token: string): Promise<{ business: Business; drivers: Driver[]; orders: Order[] }> =>
     req('/api/state', token),

@@ -83,6 +83,7 @@ const en: Dict = {
   outstanding: 'Outstanding',
   minsShort: '{n} min',
   nearest: 'nearest',
+  exportCsv: 'Export week (CSV)',
 };
 
 const ar: Dict = {
@@ -160,6 +161,7 @@ const ar: Dict = {
   outstanding: 'المتبقّي',
   minsShort: '{n} د',
   nearest: 'الأقرب',
+  exportCsv: 'تصدير الأسبوع (CSV)',
 };
 
 const dicts: Record<Lang, Dict> = { en, ar };

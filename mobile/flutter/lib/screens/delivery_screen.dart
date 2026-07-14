@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
+import '../i18n.dart';
 import '../services/api_client.dart';
 
 class DeliveryScreen extends StatefulWidget {
@@ -30,6 +31,8 @@ class DeliveryScreen extends StatefulWidget {
 class _DeliveryScreenState extends State<DeliveryScreen> {
   late String _status = widget.initialStatus;
   bool _busy = false;
+  final _otp = TextEditingController();
+  String? _otpError;
 
   Future<void> _navigate() async {
     // Opens Google Maps turn-by-turn to the customer address.
@@ -42,14 +45,18 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   }
 
   Future<void> _setStatus(String next) async {
-    setState(() => _busy = true);
+    setState(() { _busy = true; _otpError = null; });
     try {
-      await widget.api.setStatus(widget.orderId, next);
+      await widget.api.setStatus(widget.orderId, next,
+          otp: next == 'Delivered' ? _otp.text.trim() : null);
       setState(() => _status = next);
       if (next == 'Delivered' && mounted) Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: $e')));
+      if (e.toString().contains('wrong_otp')) {
+        setState(() => _otpError = 'الكود غلط · Wrong code');
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -107,14 +114,31 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
               if (!picked)
                 FilledButton(
                   onPressed: _busy ? null : () => _setStatus('PickedUp'),
-                  child: _busy ? _spinner() : const Text('Picked up · استلمت الطلب'),
+                  child: _busy ? _spinner() : Text(tr('pickedUp')),
                 ),
-              if (picked)
+              if (picked) ...[
+                // Ask the customer for their 4-digit code before confirming.
+                TextField(
+                  controller: _otp,
+                  keyboardType: TextInputType.number,
+                  maxLength: 4,
+                  onChanged: (_) => setState(() {}),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: 8),
+                  decoration: InputDecoration(
+                    labelText: 'كود الاستلام · Delivery code',
+                    errorText: _otpError,
+                    filled: true, fillColor: const Color(0xFFFBFAFF),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 FilledButton(
                   style: FilledButton.styleFrom(backgroundColor: MeshwarColors.ok),
-                  onPressed: _busy ? null : () => _setStatus('Delivered'),
-                  child: _busy ? _spinner() : const Text('Delivered & cash collected · تم التسليم'),
+                  onPressed: (_busy || _otp.text.trim().length < 4) ? null : () => _setStatus('Delivered'),
+                  child: _busy ? _spinner() : Text(tr('delivered')),
                 ),
+              ],
               const SizedBox(height: 8),
               Center(child: Text('Status: $_status', style: const TextStyle(color: MeshwarColors.muted, fontSize: 12))),
             ],

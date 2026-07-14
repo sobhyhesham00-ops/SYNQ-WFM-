@@ -86,6 +86,7 @@ model Driver {
   currentLat      Float?
   currentLng      Float?
   lastSeenAt      DateTime?
+  fcmToken        String?   // push token for new-assignment notifications
 
   createdAt DateTime @default(now())
 
@@ -123,6 +124,11 @@ model Order {
 
   // Opaque token for the public customer tracking link (/t/:token). No auth.
   publicToken      String   @unique @default(uuid())
+  // 4-digit code the customer gives the driver to confirm handover (anti-dispute).
+  deliveryOtp      String?
+  // Customer's post-delivery rating of the driver (1–5) + when.
+  rating           Int?
+  ratedAt          DateTime?
 
   createdAt   DateTime  @default(now())
   assignedAt  DateTime?

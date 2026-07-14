@@ -13,6 +13,16 @@ const egp = (piastres: number) =>
 
 const egpNum = (piastres: number) => (piastres / 100).toFixed(2);
 
+// Register/refresh the driver's FCM device token for push notifications.
+driverRouter.post('/driver/me/fcm-token', requireDriver, async (req, res) => {
+  const { token } = req.body as { token?: string };
+  await prisma.driver.update({
+    where: { id: req.auth!.driverId! },
+    data: { fcmToken: token || null },
+  });
+  res.json({ ok: true });
+});
+
 // The logged-in driver's active + recent orders (mobile home screen).
 driverRouter.get('/driver/me/orders', requireDriver, async (req, res) => {
   const driverId = req.auth!.driverId!;
