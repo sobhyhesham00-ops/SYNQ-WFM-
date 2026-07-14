@@ -12,6 +12,22 @@ import { requireManager, requireDriver } from '../services/auth';
 const prisma = new PrismaClient();
 export const orderRouter = Router();
 
+// Route replay: a driver's location history for the map polyline.
+// Optional ?from=ISO&to=ISO time window; defaults to the last 4 hours.
+orderRouter.get('/drivers/:id/route', requireManager, async (req, res) => {
+  const to = req.query.to ? new Date(String(req.query.to)) : new Date();
+  const from = req.query.from
+    ? new Date(String(req.query.from))
+    : new Date(to.getTime() - 4 * 60 * 60 * 1000);
+
+  const points = await prisma.locationLog.findMany({
+    where: { driverId: req.params.id, timestamp: { gte: from, lte: to } },
+    select: { lat: true, lng: true, timestamp: true },
+    orderBy: { timestamp: 'asc' },
+  });
+  res.json({ driverId: req.params.id, from, to, points });
+});
+
 // Dashboard bootstrap: current drivers (with last position) + open orders.
 // The live WS stream takes over from here for incremental updates.
 orderRouter.get('/state', requireManager, async (req, res) => {

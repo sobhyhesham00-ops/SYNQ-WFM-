@@ -41,6 +41,9 @@ export const api = {
 
   assign: (token: string, orderId: string, driverId: string) =>
     req(`/api/orders/${orderId}/assign`, token, { method: 'POST', body: JSON.stringify({ driverId }) }),
+
+  route: (token: string, driverId: string): Promise<{ points: { lat: number; lng: number; timestamp: string }[] }> =>
+    req(`/api/drivers/${driverId}/route`, token),
 };
 
 export const egp = (piastres: number) =>

@@ -7,6 +7,16 @@
 **Two apps, one system:** a battery-proof Flutter **driver app**, and a React
 **manager/cashier dashboard** — talking to one lean Node + PostgreSQL backend.
 
+## Screenshots
+
+The dashboard running against the real backend (Postgres + WebSocket). Street
+tiles need outbound network; the live driver pins, cash drawer, and route
+replay are driven by seeded backend data.
+
+| Live fleet + cash drawer | Route replay (from `location_logs`) |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Route replay](docs/screenshots/route-replay.png) |
+
 ## Repo layout
 
 ```

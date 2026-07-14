@@ -4,6 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../theme.dart';
 import '../services/location_service.dart';
+import '../services/api_client.dart';
+import 'delivery_screen.dart';
+
+// In the real app base URL + JWT come from config + secure storage (set at login).
+const _apiBase = String.fromEnvironment('API_BASE', defaultValue: 'https://api.meshwar.app');
+const _driverToken = String.fromEnvironment('DRIVER_TOKEN', defaultValue: '');
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.driverName});
@@ -106,19 +112,40 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const Text('My orders', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             const SizedBox(height: 10),
-            ..._orders.map((o) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: MeshwarCard(
-                child: Row(children: [
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(o.$1, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    Text('${o.$2.toStringAsFixed(0)} EGP',
-                      style: const TextStyle(color: MeshwarColors.muted, fontSize: 13)),
-                  ])),
-                  _StatusChip(o.$3),
-                ]),
-              ),
-            )),
+            ..._orders.asMap().entries.map((e) {
+              final i = e.key;
+              final o = e.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: o.$3 == 'Delivered' ? null : () async {
+                    await Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => DeliveryScreen(
+                        api: OrderApi(_apiBase, _driverToken),
+                        orderId: 'demo-order-$i',
+                        address: o.$1,
+                        cashEGP: o.$2,
+                        initialStatus: o.$3,
+                      ),
+                    ));
+                  },
+                  child: MeshwarCard(
+                    child: Row(children: [
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(o.$1, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        Text('${o.$2.toStringAsFixed(0)} EGP',
+                          style: const TextStyle(color: MeshwarColors.muted, fontSize: 13)),
+                      ])),
+                      _StatusChip(o.$3),
+                      if (o.$3 != 'Delivered')
+                        const Padding(padding: EdgeInsets.only(left: 6),
+                          child: Icon(Icons.chevron_right, color: MeshwarColors.muted)),
+                    ]),
+                  ),
+                ),
+              );
+            }),
           ],
         ),
       ),

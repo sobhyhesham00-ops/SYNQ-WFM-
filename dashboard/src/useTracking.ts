@@ -11,9 +11,15 @@ interface Drawer { driverId: string; totalEGP: string; lines: DrawerLine[] }
 export function useTracking(wsBase: string, token: string) {
   const [pins, setPins] = useState<Record<string, DriverPin>>({});
   const [drawers, setDrawers] = useState<Record<string, Drawer>>({});
+  const [nonce, setNonce] = useState(0); // bump to force a reconnect
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    // No token yet (logged out) → don't open a socket.
+    if (!token) return;
+
+    let closedByUs = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
     const ws = new WebSocket(`${wsBase}/ws/dashboard?token=${token}`);
     wsRef.current = ws;
 
@@ -44,10 +50,12 @@ export function useTracking(wsBase: string, token: string) {
       }
     };
 
-    // Auto-reconnect on drop.
-    ws.onclose = () => setTimeout(() => window.location.reload(), 3000);
-    return () => ws.close();
-  }, [wsBase, token]);
+    // Reconnect on unexpected drop (not on unmount / logout).
+    ws.onclose = () => {
+      if (!closedByUs) retry = setTimeout(() => setNonce((n) => n + 1), 3000);
+    };
+    return () => { closedByUs = true; clearTimeout(retry); ws.close(); };
+  }, [wsBase, token, nonce]);
 
   return { pins, drawers };
 }

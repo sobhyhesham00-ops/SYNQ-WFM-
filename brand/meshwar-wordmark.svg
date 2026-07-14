@@ -1,0 +1,21 @@
+<svg width="440" height="120" viewBox="0 0 440 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Meshwar مشوار">
+  <defs>
+    <linearGradient id="wg" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C5CFF"/><stop offset="0.55" stop-color="#9D7BFF"/><stop offset="1" stop-color="#B79BFF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- mark -->
+  <g transform="translate(12,12)">
+    <rect width="96" height="96" rx="24" fill="url(#wg)"/>
+    <path d="M28 70 C 28 56, 47 60, 48 48 C 49 36, 39 33, 48 25"
+          stroke="#fff" stroke-width="6" stroke-linecap="round" fill="none" stroke-dasharray="1 8.5"/>
+    <circle cx="28" cy="70" r="7" fill="#fff"/><circle cx="28" cy="70" r="3" fill="#7C5CFF"/>
+    <path d="M67 18 C 59 18, 55 24.5, 55 30.5 C 55 38.5, 67 47, 67 47 C 67 47, 79 38.5, 79 30.5 C 79 24.5, 75 18, 67 18 Z" fill="#fff"/>
+    <circle cx="67" cy="30" r="5" fill="#7C5CFF"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="124" y="58" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="46" font-weight="800" letter-spacing="-1" fill="#1A1730">Meshwar</text>
+  <text x="125" y="92" font-family="system-ui, -apple-system, sans-serif" font-size="30" font-weight="700" fill="#8B86A3" direction="rtl">مشوار</text>
+</svg>

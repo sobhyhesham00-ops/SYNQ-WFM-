@@ -12,7 +12,16 @@ export default function App() {
   const [name, setName] = useState(() => localStorage.getItem('meshwar_name') ?? '');
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [route, setRoute] = useState<{ lat: number; lng: number }[] | null>(null);
+  const [replayDriver, setReplayDriver] = useState<string | null>(null);
   const { pins, drawers } = useTracking(WS_BASE, token ?? '');
+
+  async function toggleReplay(driverId: string) {
+    if (replayDriver === driverId) { setRoute(null); setReplayDriver(null); return; }
+    const { points } = await api.route(token!, driverId);
+    setRoute(points.map((p) => ({ lat: p.lat, lng: p.lng })));
+    setReplayDriver(driverId);
+  }
 
   const refresh = () =>
     token && api.state(token).then((s) => { setDrivers(s.drivers); setOrders(s.orders); });
@@ -48,7 +57,12 @@ export default function App() {
   return (
     <div className="app">
       <div className="map-pane">
-        <LiveMap drivers={drivers} livePins={pins} />
+        <LiveMap drivers={drivers} livePins={pins} route={route} />
+        {replayDriver && (
+          <button className="replay-banner" onClick={() => { setRoute(null); setReplayDriver(null); }}>
+            ▶ Replaying {drivers.find((d) => d.id === replayDriver)?.name}'s route · tap to exit
+          </button>
+        )}
       </div>
 
       <aside className="sidebar">
@@ -90,17 +104,26 @@ export default function App() {
                 <div className="grow subtle">Owes cashier</div>
                 <div className="amount">{owedEGP ?? '—'}</div>
               </div>
-              <button
-                className="pill-btn"
-                disabled={!owedEGP}
-                onClick={async () => {
-                  const r = await api.settle(token, d.id);
-                  alert(`Collected ${r.settledEGP} EGP from ${d.name} (${r.orderCount} orders)`);
-                  refresh();
-                }}
-              >
-                Received cash
-              </button>
+              <div className="row" style={{ gap: 8, marginTop: 10 }}>
+                <button
+                  className="pill-btn"
+                  disabled={!owedEGP}
+                  onClick={async () => {
+                    const r = await api.settle(token, d.id);
+                    alert(`Collected ${r.settledEGP} EGP from ${d.name} (${r.orderCount} orders)`);
+                    refresh();
+                  }}
+                >
+                  Received cash
+                </button>
+                <button
+                  className={`ghost-pill ${replayDriver === d.id ? 'on' : ''}`}
+                  onClick={() => toggleReplay(d.id)}
+                  title="Replay today's route"
+                >
+                  {replayDriver === d.id ? '■ Stop' : '▶ Route'}
+                </button>
+              </div>
             </div>
           );
         })}
