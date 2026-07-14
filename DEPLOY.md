@@ -1,4 +1,4 @@
-# Deploying Meshwar
+# Deploying El Kaptin
 
 Three ways to ship, cheapest → most control.
 

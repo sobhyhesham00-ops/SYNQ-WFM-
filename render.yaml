@@ -1,4 +1,4 @@
-# Meshwar — Render Blueprint (one-click deploy of the whole stack).
+# El Kaptin — Render Blueprint (one-click deploy of the whole stack).
 # In Render: New → Blueprint → point at this repo. Creates Postgres + backend
 # (REST/WebSocket) + the dashboard static site.
 databases:

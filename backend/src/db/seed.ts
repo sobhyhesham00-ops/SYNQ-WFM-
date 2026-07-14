@@ -49,6 +49,7 @@ async function main() {
         currentLat: 30.0561,
         currentLng: 31.2394,
         status: 'Delivering',
+        availableForHire: true, city: 'Downtown Cairo', vehicle: 'Motorbike',
       },
     }),
   ]);
@@ -87,6 +88,7 @@ async function main() {
     data: {
       restaurantId: pharmacy.id, name: 'Ramy', phone: '01000000003',
       passwordHash: hash('1234'), currentLat: 30.05, currentLng: 31.24, status: 'Delivering',
+      availableForHire: true, city: 'Downtown Cairo', vehicle: 'Tuk-tuk',
     },
   });
   await prisma.order.createMany({
@@ -119,7 +121,8 @@ async function main() {
 
   // ---- A koshk (كشك) tenant — the classic Egyptian street kiosk. ----
   const koshk = await prisma.restaurant.create({
-    data: { name: 'Koshk El Sae3a', phone: '0225000000', businessType: 'Kiosk' },
+    data: { name: 'Koshk El Sae3a', phone: '0225000000', businessType: 'Kiosk',
+      shopLat: 30.0478, shopLng: 31.2336 },
   });
   await prisma.managerUser.create({
     data: {

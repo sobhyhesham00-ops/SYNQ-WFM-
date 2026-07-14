@@ -1,4 +1,4 @@
--- Meshwar — raw PostgreSQL schema (if you prefer SQL over Prisma).
+-- El Kaptin — raw PostgreSQL schema (if you prefer SQL over Prisma).
 -- Money is stored as integer piastres (1 EGP = 100). Never FLOAT for cash.
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto"; -- for gen_random_uuid()

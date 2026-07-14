@@ -20,6 +20,10 @@ export interface Analytics {
   ordersToday: number; deliveredToday: number;
   avgDeliveryMinutes: number | null; collectedEGP: string; outstandingEGP: string;
 }
+export interface Captain {
+  id: string; name: string; phone: string; city: string | null; vehicle: string | null;
+  online: boolean; rating: number | null; ratingCount: number; distanceKm: number | null;
+}
 
 export interface Order {
   id: string; customerAddress: string; totalCashToCollect: number;
@@ -61,6 +65,8 @@ export const api = {
     req('/api/drivers', token, { method: 'POST', body: JSON.stringify(d) }),
 
   analytics: (token: string): Promise<Analytics> => req('/api/analytics', token),
+
+  availableCaptains: (token: string): Promise<Captain[]> => req('/api/captains/available', token),
 
   // Download the weekly cash report CSV (triggers a browser download).
   async exportCashCsv(token: string, days = 7) {

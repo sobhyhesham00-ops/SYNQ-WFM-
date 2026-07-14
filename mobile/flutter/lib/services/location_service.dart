@@ -39,7 +39,7 @@ Future<void> initBackgroundTracking() async {
       isForegroundMode: true, // <-- the key to surviving battery optimizers
       autoStart: false, // start only when the driver goes on shift
       notificationChannelId: 'meshwar_tracking',
-      initialNotificationTitle: 'Meshwar — أنت متصل',
+      initialNotificationTitle: 'El Kaptin — أنت متصل',
       initialNotificationContent: 'جارٍ تتبع موقعك أثناء الوردية',
       foregroundServiceNotificationId: 8801,
     ),
@@ -74,7 +74,7 @@ void onServiceStart(ServiceInstance service) async {
   // Keep the Android notification honest about state.
   if (service is AndroidServiceInstance) {
     service.setForegroundNotificationInfo(
-      title: 'Meshwar — أنت متصل',
+      title: 'El Kaptin — أنت متصل',
       content: 'التتبع يعمل في الخلفية',
     );
   }

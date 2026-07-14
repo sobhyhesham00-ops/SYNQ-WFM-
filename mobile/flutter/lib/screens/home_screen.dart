@@ -20,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final DriverApi _api = DriverApi(widget.token);
   bool _onShift = false;
+  bool _forHire = false;
   List<DriverOrder> _orders = [];
   bool _loading = true;
 
@@ -67,9 +68,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       decoration: BoxDecoration(gradient: MeshwarColors.brandGradient,
                         borderRadius: BorderRadius.circular(9))),
                     const SizedBox(width: 10),
-                    const Text('Meshwar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+                    const Text('El Kaptin', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
                     const SizedBox(width: 6),
-                    const Text('مشوار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: MeshwarColors.muted)),
+                    const Text('الكابتن', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: MeshwarColors.muted)),
                   ]),
                   Row(children: [
                     TextButton(onPressed: () => toggleLang(),
@@ -132,6 +133,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(tr('locationOn'), style: const TextStyle(color: MeshwarColors.muted, fontSize: 12)),
                   ]),
                 ),
+              const SizedBox(height: 14),
+
+              // Available-for-hire toggle (opt into the Find-a-Captain directory).
+              MeshwarCard(
+                child: Row(children: [
+                  const Icon(Icons.badge_outlined, color: MeshwarColors.brand),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(tr('availableForHire'), style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text(tr('availableHint'), style: const TextStyle(color: MeshwarColors.muted, fontSize: 12)),
+                  ])),
+                  Switch(
+                    value: _forHire,
+                    activeColor: MeshwarColors.brand,
+                    onChanged: (v) async {
+                      setState(() => _forHire = v);
+                      try { await _api.setAvailability(v); }
+                      catch (_) { if (mounted) setState(() => _forHire = !v); }
+                    },
+                  ),
+                ]),
+              ),
               const SizedBox(height: 20),
 
               Text(tr('myOrders'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),

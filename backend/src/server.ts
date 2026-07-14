@@ -40,4 +40,4 @@ const server = http.createServer(app);
 attachTrackingWs(server); // upgrades /ws/driver and /ws/dashboard
 
 const PORT = Number(process.env.PORT ?? 8080);
-server.listen(PORT, () => console.log(`Meshwar backend on :${PORT}`));
+server.listen(PORT, () => console.log(`El Kaptin backend on :${PORT}`));

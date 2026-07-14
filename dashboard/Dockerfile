@@ -1,4 +1,4 @@
-# Meshwar dashboard — build the Vite app, serve the static bundle with nginx.
+# El Kaptin dashboard — build the Vite app, serve the static bundle with nginx.
 FROM node:20-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./

@@ -1,4 +1,4 @@
-/* Meshwar dashboard — fintech-inspired design system
+/* El Kaptin dashboard — fintech-inspired design system
    (soft lilac gradients, rounded cards, bold balances, pill buttons). */
 
 :root {
@@ -96,6 +96,17 @@ body {
 .link-btn { border: none; background: transparent; color: var(--brand); font-weight: 700;
   font-size: 12px; cursor: pointer; padding: 0; white-space: nowrap; text-decoration: none; }
 .link-btn:hover { text-decoration: underline; }
+
+/* find a captain */
+.find-captain { padding: 14px 16px; }
+.find-head { width: 100%; border: none; background: transparent; cursor: pointer; display: flex;
+  align-items: center; justify-content: space-between; font-weight: 800; font-size: 15px; color: var(--ink); }
+.find-head .chev { color: var(--muted); font-size: 12px; }
+.captain-row { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.captain-row:last-of-type { border-bottom: none; }
+.dot-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-inline-start: 8px;
+  background: var(--muted); vertical-align: middle; }
+.dot-status.on { background: var(--ok); }
 
 /* onboarding checklist */
 .onboard { background: var(--panel); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-sm);

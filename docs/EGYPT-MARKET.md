@@ -1,4 +1,4 @@
-# Egypt market & culture study — what Meshwar is built around
+# Egypt market & culture study — what El Kaptin is built around
 
 This drives concrete product decisions, not just positioning. Each insight below
 maps to something in the codebase.

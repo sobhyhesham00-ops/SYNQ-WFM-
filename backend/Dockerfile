@@ -1,4 +1,4 @@
-# Meshwar backend — REST + WebSocket in one small container.
+# El Kaptin backend — REST + WebSocket in one small container.
 # Runs TypeScript directly with tsx (no build step; avoids ESM extension pitfalls).
 FROM node:20-slim
 WORKDIR /app

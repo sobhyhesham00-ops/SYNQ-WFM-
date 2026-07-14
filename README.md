@@ -1,6 +1,6 @@
-# Meshwar · مشوار — Driver Tracking SaaS
+# El Kaptin · الكابتن — Driver Tracking SaaS
 
-> *"Every delivery is a **meshwar**."* — hardware-free, phone-GPS live tracking
+> *"Every order gets a **captain**."* — hardware-free, phone-GPS live tracking
 > + Cash-on-Delivery (COD) reconciliation for independent restaurants and
 > takeaway chains running their own private delivery fleets in Egypt.
 
@@ -43,6 +43,13 @@ the shop (Haversine over live GPS) and flags the 🎯 nearest one.
 | Delivery handover code (customer) | Post-delivery rating (customer) |
 |---|---|
 | ![Delivery code](docs/screenshots/proof-code.png) | ![Rating](docs/screenshots/proof-rating.png) |
+
+**Find a Captain (directory):** drivers can opt in as *available for hire*; a
+merchant who needs one browses nearby captains (rating, vehicle, distance) and
+**contacts them directly** (call / WhatsApp) to arrange it privately. Pure
+discovery — El Kaptin makes the intro but never handles the captain's pay, takes
+a commission, or routes COD between strangers, keeping it a noticeboard rather
+than a dispatch/employment tool. See `dashboard/src/FindCaptain.tsx`.
 
 **Proof of delivery:** every assignment mints a 4-digit code shown on the
 customer's tracking page; the driver must enter it to mark *Delivered* — cutting
@@ -87,7 +94,7 @@ Customer-facing live tracking link (`/t/:token`, no login — shareable by SMS):
 │   └── lib/
 │       ├── screens/             Login + home (shift toggle, cash hero)
 │       ├── services/location_service.dart   The battery-proof tracking core
-│       └── theme.dart           Shared Meshwar visual identity
+│       └── theme.dart           Shared El Kaptin visual identity
 ├── firestore/                   Alternative if you skip the SQL backend
 └── docker-compose.yml           One-command Postgres + backend
 ```

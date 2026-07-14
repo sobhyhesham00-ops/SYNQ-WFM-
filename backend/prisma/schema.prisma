@@ -1,4 +1,4 @@
-// Meshwar — PostgreSQL schema (Prisma)
+// El Kaptin — PostgreSQL schema (Prisma)
 // Run: npx prisma migrate dev --name init
 //
 // Design notes:
@@ -18,7 +18,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// The kind of merchant using Meshwar. Drives the UI's vocabulary per vertical.
+// The kind of merchant using El Kaptin. Drives the UI's vocabulary per vertical.
 // Covers Egypt's small-merchant long tail: eateries, pharmacies, groceries
 // (بقالة), mini-markets, the ubiquitous street kiosk (كشك), and a catch-all.
 enum BusinessType {
@@ -87,6 +87,14 @@ model Driver {
   currentLng      Float?
   lastSeenAt      DateTime?
   fcmToken        String?   // push token for new-assignment notifications
+
+  // "Find a Captain" directory: a driver may opt in to be discoverable by other
+  // merchants who need one. Pure discovery — merchants contact them directly and
+  // arrange terms themselves; El Kaptin never handles the captain's pay or COD
+  // between strangers, so it stays a noticeboard, not a dispatch/employment tool.
+  availableForHire Boolean @default(false)
+  city             String?
+  vehicle          String? // e.g. "Motorbike", "Tuk-tuk", "Car"
 
   createdAt DateTime @default(now())
 

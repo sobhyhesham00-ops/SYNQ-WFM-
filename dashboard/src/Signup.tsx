@@ -37,7 +37,7 @@ export function Signup({ onLogin, onSwitch }: {
     <div className="login-wrap">
       <div className="login-card" style={{ width: 380 }}>
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}><span className="brand-dot" /> Meshwar <span style={{ fontSize: 16, color: 'var(--muted)', fontWeight: 700 }}>مشوار</span></h2>
+          <h2 style={{ margin: 0 }}><span className="brand-dot" /> El Kaptin <span style={{ fontSize: 16, color: 'var(--muted)', fontWeight: 700 }}>الكابتن</span></h2>
           <button className="ghost-btn" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}>
             {lang === 'ar' ? 'EN' : 'ع'}
           </button>

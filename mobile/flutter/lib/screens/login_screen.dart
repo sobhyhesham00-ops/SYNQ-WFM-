@@ -53,9 +53,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(gradient: MeshwarColors.brandGradient,
                       borderRadius: BorderRadius.circular(9))),
                   const SizedBox(width: 10),
-                  const Text('Meshwar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+                  const Text('El Kaptin', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
                   const SizedBox(width: 8),
-                  const Text('مشوار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: MeshwarColors.muted)),
+                  const Text('الكابتن', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: MeshwarColors.muted)),
                   const Spacer(),
                   TextButton(
                     onPressed: () => toggleLang(),

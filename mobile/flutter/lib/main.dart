@@ -21,7 +21,7 @@ class MeshwarApp extends StatelessWidget {
     return ValueListenableBuilder<String>(
       valueListenable: langNotifier,
       builder: (_, lang, __) => MaterialApp(
-        title: 'Meshwar Driver',
+        title: 'El Kaptin Driver',
         debugShowCheckedModeBanner: false,
         theme: buildMeshwarTheme(),
         locale: Locale(lang),

@@ -1,4 +1,4 @@
-# Meshwar backend on Fly.io. Run `fly launch` to set app name + region, then
+# El Kaptin backend on Fly.io. Run `fly launch` to set app name + region, then
 # attach Postgres (`fly postgres create` + `fly postgres attach`).
 app = "meshwar-backend"
 primary_region = "cdg"  # Paris — low latency to Egypt; try "fra" too

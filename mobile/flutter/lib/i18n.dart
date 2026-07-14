@@ -34,6 +34,8 @@ const Map<String, Map<String, String>> _dict = {
     'delivered': 'Delivered & cash collected',
     'status': 'Status',
     'prescriptionReq': 'Prescription required',
+    'availableForHire': 'Available for hire',
+    'availableHint': 'Let other shops find you for deliveries',
   },
   'ar': {
     'signIn': 'دخول',
@@ -61,6 +63,8 @@ const Map<String, Map<String, String>> _dict = {
     'delivered': 'اتسلّم واتحصّل الكاش',
     'status': 'الحالة',
     'prescriptionReq': 'محتاجة روشتة',
+    'availableForHire': 'متاح للعمل',
+    'availableHint': 'خلّي محلات تانية تلاقيك للتوصيل',
   },
 };
 
