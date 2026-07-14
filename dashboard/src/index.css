@@ -177,6 +177,9 @@ table.receipts th { text-align: start; color: var(--muted); font-size: 11px; tex
   letter-spacing: .4px; padding: 8px; border-bottom: 1px solid var(--line); }
 table.receipts td { padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 table.receipts .num { font-variant-numeric: tabular-nums; }
+table.lb tr.lead td { background: color-mix(in srgb, var(--brand) 7%, transparent); }
+table.lb tr.lead td:first-child { border-start-start-radius: 10px; border-end-start-radius: 10px; }
+table.lb tr.lead td:last-child { border-start-end-radius: 10px; border-end-end-radius: 10px; }
 
 /* wallet method picker */
 .method-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }

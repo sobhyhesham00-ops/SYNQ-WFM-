@@ -74,6 +74,11 @@ export const api = {
 
   analytics: (token: string): Promise<Analytics> => req('/api/analytics', token),
 
+  leaderboard: (token: string): Promise<{ days: number; board: {
+    driverId: string; name: string; deliveries: number; collectedEGP: string;
+    avgMinutes: number | null; rating: number | null;
+  }[] }> => req('/api/leaderboard', token),
+
   // Download the weekly cash report CSV (triggers a browser download).
   async exportCashCsv(token: string, days = 7) {
     const res = await fetch(`${API_BASE}/api/reports/cash.csv?days=${days}`, {

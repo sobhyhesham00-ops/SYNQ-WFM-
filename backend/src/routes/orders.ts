@@ -81,6 +81,47 @@ orderRouter.get('/reports/cash.csv', requireManager, async (req, res) => {
   res.send(rows.join('\n'));
 });
 
+// Driver-performance leaderboard over the last N days (default 7). Growth+ only.
+orderRouter.get('/leaderboard', requireManager, async (req, res) => {
+  if (!(await gate(res, req.auth!.restaurantId, 'analytics'))) return;
+  const rid = req.auth!.restaurantId;
+  const days = Math.min(Number(req.query.days) || 7, 90);
+  const since = new Date(Date.now() - days * 86400_000);
+
+  const [drivers, delivered, ratings] = await Promise.all([
+    prisma.driver.findMany({ where: { restaurantId: rid }, select: { id: true, name: true } }),
+    prisma.order.findMany({
+      where: { restaurantId: rid, status: 'Delivered', deliveredAt: { gte: since } },
+      select: { driverId: true, totalCashToCollect: true, assignedAt: true, deliveredAt: true },
+    }),
+    prisma.order.groupBy({
+      by: ['driverId'], where: { restaurantId: rid, rating: { not: null } },
+      _avg: { rating: true }, _count: { rating: true },
+    }),
+  ]);
+
+  const rBy = new Map(ratings.map((r) => [r.driverId, { avg: r._avg.rating, count: r._count.rating }]));
+  const stats = new Map(drivers.map((d) => [d.id, { name: d.name, count: 0, cash: 0, mins: [] as number[] }]));
+  for (const o of delivered) {
+    const s = o.driverId && stats.get(o.driverId);
+    if (!s) continue;
+    s.count += 1; s.cash += o.totalCashToCollect;
+    if (o.assignedAt && o.deliveredAt) s.mins.push((o.deliveredAt.getTime() - o.assignedAt.getTime()) / 60000);
+  }
+
+  const egp = (p: number) => (p / 100).toLocaleString('en-EG', { minimumFractionDigits: 2 });
+  const board = [...stats.entries()]
+    .map(([id, s]) => ({
+      driverId: id, name: s.name, deliveries: s.count, collectedEGP: egp(s.cash),
+      avgMinutes: s.mins.length ? Math.round(s.mins.reduce((a, b) => a + b, 0) / s.mins.length) : null,
+      rating: rBy.get(id)?.avg ?? null,
+    }))
+    .filter((r) => r.deliveries > 0)
+    .sort((a, b) => b.deliveries - a.deliveries || (b.rating ?? 0) - (a.rating ?? 0));
+
+  res.json({ days, board });
+});
+
 // Today's analytics for the dashboard strip.
 orderRouter.get('/analytics', requireManager, async (req, res) => {
   if (!(await gate(res, req.auth!.restaurantId, 'analytics'))) return;

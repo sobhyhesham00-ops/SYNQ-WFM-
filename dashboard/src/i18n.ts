@@ -84,6 +84,10 @@ const en: Dict = {
   minsShort: '{n} min',
   nearest: 'nearest',
   exportCsv: 'Export week (CSV)',
+  leaderboard: 'Leaderboard',
+  last7days: 'Last 7 days',
+  colDriver: 'Driver', colDeliveries: 'Deliveries', colAvg: 'Avg time', colRating: 'Rating', colCash: 'Cash',
+  noLeaderboard: 'No completed deliveries yet',
   // plans
   choosePlan: 'Choose your plan',
   planNote: 'Billing is handled via Fawry / wallet — no card needed. Change anytime.',
@@ -214,6 +218,10 @@ const ar: Dict = {
   minsShort: '{n} د',
   nearest: 'الأقرب',
   exportCsv: 'تصدير الأسبوع (CSV)',
+  leaderboard: 'ترتيب السواقين',
+  last7days: 'آخر 7 أيام',
+  colDriver: 'السواق', colDeliveries: 'التوصيلات', colAvg: 'متوسط الوقت', colRating: 'التقييم', colCash: 'الكاش',
+  noLeaderboard: 'لسه مفيش توصيلات مكتملة',
   // plans
   choosePlan: 'اختار باقتك',
   planNote: 'الدفع عن طريق فوري / المحفظة — من غير كارت. تقدر تغيّر في أي وقت.',
