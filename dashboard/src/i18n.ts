@@ -128,6 +128,14 @@ const en: Dict = {
   upgradeToUnlock: 'Upgrade to unlock',
   lockedFeature: 'This is a paid feature on your plan',
   driverLimit: "You've hit your plan's driver limit — upgrade to add more",
+  monthly: 'Monthly',
+  annual: 'Annual',
+  twoMonthsFree: '2 months free',
+  perYear: 'EGP / yr',
+  billingHistory: 'Billing history',
+  receipts: 'Receipts',
+  noReceipts: 'No payments yet',
+  colDate: 'Date', colPlan: 'Plan', colAmount: 'Amount', colMethod: 'Method', colRef: 'Reference',
 };
 
 const ar: Dict = {
@@ -250,6 +258,14 @@ const ar: Dict = {
   upgradeToUnlock: 'رقّي باقتك عشان تفتحها',
   lockedFeature: 'الميزة دي مدفوعة في باقتك',
   driverLimit: 'وصلت للحد الأقصى للسواقين في باقتك — رقّي عشان تضيف أكتر',
+  monthly: 'شهري',
+  annual: 'سنوي',
+  twoMonthsFree: 'شهرين مجاناً',
+  perYear: 'جنيه / سنة',
+  billingHistory: 'سجل الفواتير',
+  receipts: 'الإيصالات',
+  noReceipts: 'لسه مفيش مدفوعات',
+  colDate: 'التاريخ', colPlan: 'الباقة', colAmount: 'المبلغ', colMethod: 'الطريقة', colRef: 'الكود المرجعي',
 };
 
 const dicts: Record<Lang, Dict> = { en, ar };

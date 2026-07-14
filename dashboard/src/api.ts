@@ -58,13 +58,16 @@ export const api = {
   updateBusiness: (token: string, patch: { ramadanMode?: boolean; iftarTime?: string | null; plan?: PlanTier }) =>
     req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),
 
-  checkout: (token: string, plan: PlanTier, method: 'fawry' | 'vodafone' | 'instapay'): Promise<{
-    plan: PlanTier; method?: string; reference?: string; amountEGP?: string; payTo?: string | null;
+  checkout: (token: string, plan: PlanTier, method: 'fawry' | 'vodafone' | 'instapay', cycle: 'monthly' | 'annual'): Promise<{
+    plan: PlanTier; method?: string; cycle?: string; reference?: string; amountEGP?: string; payTo?: string | null;
     free?: boolean; contactSales?: boolean;
   }> =>
-    req('/api/billing/checkout', token, { method: 'POST', body: JSON.stringify({ plan, method }) }),
-  confirmPayment: (token: string, plan: PlanTier) =>
-    req('/api/billing/confirm', token, { method: 'POST', body: JSON.stringify({ plan }) }),
+    req('/api/billing/checkout', token, { method: 'POST', body: JSON.stringify({ plan, method, cycle }) }),
+  confirmPayment: (token: string, body: { plan: PlanTier; method: string; cycle: string; reference: string }) =>
+    req('/api/billing/confirm', token, { method: 'POST', body: JSON.stringify(body) }),
+
+  billingHistory: (token: string): Promise<{ id: string; plan: string; method: string; cycle: string; amountEGP: string; reference: string; date: string }[]> =>
+    req('/api/billing/history', token),
 
   addDriver: (token: string, d: { name: string; phone: string; password: string }): Promise<Driver> =>
     req('/api/drivers', token, { method: 'POST', body: JSON.stringify(d) }),

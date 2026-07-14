@@ -118,9 +118,13 @@ orderRouter.get('/analytics', requireManager, async (req, res) => {
 // El Kaptin's own receiving accounts (where merchants send the fee). Placeholders.
 const PAYEES = { vodafone: '010 0055 5777', instapay: 'elkaptin@instapay' };
 
+// Annual = pay for 10 months, get 12 (2 months free).
+const cyclePiastres = (plan: Plan, cycle: string) => PLAN_PRICE[plan] * (cycle === 'annual' ? 10 : 1);
+
 orderRouter.post('/billing/checkout', requireManager, async (req, res) => {
   const plan = req.body?.plan as Plan;
   const method = (req.body?.method as 'fawry' | 'vodafone' | 'instapay') || 'fawry';
+  const cycle = req.body?.cycle === 'annual' ? 'annual' : 'monthly';
   if (!(plan in PLAN_PRICE)) return res.status(400).json({ error: 'bad plan' });
   if (plan === 'Free') { // downgrade is instant, no payment
     await prisma.restaurant.update({ where: { id: req.auth!.restaurantId }, data: { plan } });
@@ -130,22 +134,42 @@ orderRouter.post('/billing/checkout', requireManager, async (req, res) => {
 
   // Money moves through the licensed wallet/PSP — we only issue a reference.
   const reference = String(Math.floor(100000000 + Math.random() * 899999999));
-  const amountEGP = (PLAN_PRICE[plan] / 100).toFixed(2);
+  const amountEGP = (cyclePiastres(plan, cycle) / 100).toFixed(2);
   res.json({
-    plan, method, amountEGP, reference,
+    plan, method, cycle, amountEGP, reference,
     payTo: method === 'fawry' ? null : PAYEES[method], // wallet number / InstaPay handle
   });
 });
 
-// Confirm payment (stub for the Fawry webhook) → activate the plan.
+// Confirm payment (stub for the wallet webhook) → activate the plan + record a receipt.
 orderRouter.post('/billing/confirm', requireManager, async (req, res) => {
   const plan = req.body?.plan as Plan;
+  const method = String(req.body?.method ?? 'fawry');
+  const cycle = req.body?.cycle === 'annual' ? 'annual' : 'monthly';
+  const reference = String(req.body?.reference ?? '');
   if (!(plan in PLAN_PRICE)) return res.status(400).json({ error: 'bad plan' });
-  const biz = await prisma.restaurant.update({
-    where: { id: req.auth!.restaurantId }, data: { plan },
-    select: { plan: true },
+  const rid = req.auth!.restaurantId;
+  await prisma.$transaction([
+    prisma.restaurant.update({ where: { id: rid }, data: { plan } }),
+    prisma.payment.create({
+      data: { restaurantId: rid, plan, method, cycle, amount: cyclePiastres(plan, cycle), reference },
+    }),
+  ]);
+  res.json({ ok: true, plan });
+});
+
+// Billing history (receipts) for the merchant's books.
+orderRouter.get('/billing/history', requireManager, async (req, res) => {
+  const rows = await prisma.payment.findMany({
+    where: { restaurantId: req.auth!.restaurantId },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
   });
-  res.json({ ok: true, plan: biz.plan });
+  res.json(rows.map((p) => ({
+    id: p.id, plan: p.plan, method: p.method, cycle: p.cycle,
+    amountEGP: (p.amount / 100).toLocaleString('en-EG', { minimumFractionDigits: 2 }),
+    reference: p.reference, date: p.createdAt.toISOString().slice(0, 10),
+  })));
 });
 
 // Update business settings (Ramadan mode + iftar time + subscription plan).

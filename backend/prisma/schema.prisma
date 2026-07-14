@@ -58,9 +58,26 @@ model Restaurant {
   shopLng      Float?
   createdAt    DateTime     @default(now())
 
-  drivers Driver[]
-  orders  Order[]
-  users   ManagerUser[]
+  drivers  Driver[]
+  orders   Order[]
+  users    ManagerUser[]
+  payments Payment[]
+}
+
+// Subscription payment receipt. A statement of what was paid — El Kaptin issues
+// the reference and records the confirmation; it never holds the money.
+model Payment {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  plan         PlanTier
+  method       String     // fawry | vodafone | instapay
+  cycle        String     // monthly | annual
+  amount       Int        // piastres
+  reference    String
+  createdAt    DateTime   @default(now())
+
+  @@index([restaurantId, createdAt])
 }
 
 // Restaurant staff who log into the web dashboard (manager / cashier).
