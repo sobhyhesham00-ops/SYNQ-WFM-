@@ -7,6 +7,7 @@ import express from 'express';
 import cors from 'cors';
 import { attachTrackingWs } from './ws/tracking';
 import { orderRouter } from './routes/orders';
+import { authRouter } from './routes/auth';
 import { getRestaurantCashDrawers } from './services/cashDrawer';
 import { requireManager } from './services/auth';
 
@@ -15,6 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
+app.use('/api', authRouter);
 app.use('/api', orderRouter);
 
 // End-of-day cash drawer for the whole restaurant.

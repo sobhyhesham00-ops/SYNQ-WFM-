@@ -12,6 +12,26 @@ import { requireManager, requireDriver } from '../services/auth';
 const prisma = new PrismaClient();
 export const orderRouter = Router();
 
+// Dashboard bootstrap: current drivers (with last position) + open orders.
+// The live WS stream takes over from here for incremental updates.
+orderRouter.get('/state', requireManager, async (req, res) => {
+  const rid = req.auth!.restaurantId;
+  const [drivers, orders] = await Promise.all([
+    prisma.driver.findMany({
+      where: { restaurantId: rid },
+      select: {
+        id: true, name: true, phone: true, status: true,
+        currentLat: true, currentLng: true, lastSeenAt: true,
+      },
+    }),
+    prisma.order.findMany({
+      where: { restaurantId: rid, status: { not: 'Cancelled' } },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ]);
+  res.json({ drivers, orders });
+});
+
 // Manager creates an order. Amount arrives in EGP; store as piastres.
 orderRouter.post('/orders', requireManager, async (req, res) => {
   const { customerAddress, customerPhone, totalCashEGP } = req.body;

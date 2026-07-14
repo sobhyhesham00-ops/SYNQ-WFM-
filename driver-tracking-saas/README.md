@@ -52,15 +52,40 @@ driver-tracking-saas/
    settle atomically under a row lock. See
    `backend/src/services/cashDrawer.ts`.
 
-## Local quick start (backend)
+## Local quick start
 
+**Option A — one command (Docker):**
+```bash
+docker compose up --build          # Postgres + backend on :8080
+docker compose exec backend npx tsx src/db/seed.ts   # demo data
+```
+
+**Option B — manual backend:**
 ```bash
 cd backend
 npm install
 # set DATABASE_URL + JWT_SECRET in .env
 npx prisma migrate dev --name init
-npm run dev            # REST + WS on :8080
+npm run seed          # demo restaurant + drivers + orders
+npm run dev           # REST + WS on :8080
 ```
+
+**Dashboard:**
+```bash
+cd dashboard
+npm install
+npm run dev           # http://localhost:5173
+```
+
+**Demo login:** `manager@demo.eg` / `password123`
+(drivers: `01000000001` / `1234`, `01000000002` / `1234`)
+
+### UI / design
+The dashboard and driver app share one fintech-inspired visual language
+(soft lilac gradients, rounded cards, a bold gradient balance hero, pill
+buttons, status chips). The fleet's **total COD cash to collect** is the hero
+"balance" card; each driver is a holdings-style row with a *Received cash*
+settle button. See `dashboard/src/index.css` and `mobile/flutter/lib/theme.dart`.
 
 ## Recommended lean hosting (flat ~$5–15/mo)
 
