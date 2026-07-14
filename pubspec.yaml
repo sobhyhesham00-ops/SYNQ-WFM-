@@ -1,0 +1,58 @@
+name: dargak
+description: "Dargak (درجك) — A modern, localized micro-ERP & digital ledger for small Egyptian businesses."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Offline-first local storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  flutter_secure_storage: ^9.2.2
+
+  # Localization / formatting
+  intl: ^0.19.0
+
+  # Payments & QR
+  qr_flutter: ^4.1.0
+
+  # Sharing / deep links / WhatsApp
+  share_plus: ^10.0.2
+  url_launcher: ^6.3.0
+
+  # Contacts (debts linked to phone contacts)
+  flutter_contacts: ^1.1.9+2
+
+  # Reports (PDF export - premium)
+  pdf: ^3.11.1
+  printing: ^5.13.2
+
+  # Charts (financial dashboard)
+  fl_chart: ^0.68.0
+
+  # Misc
+  uuid: ^4.4.2
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
