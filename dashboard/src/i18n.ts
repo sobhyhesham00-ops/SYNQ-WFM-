@@ -64,6 +64,25 @@ const en: Dict = {
   iftarIn: 'Iftar in {time} · get drivers ready 🌙',
   iftarPassed: 'Ramadan Kareem 🌙 · iftar time',
   iftarTimeLabel: 'Iftar time',
+  // onboarding
+  getStarted: 'Get started',
+  step1Driver: 'Add your first driver',
+  step2Order: 'Create your first order',
+  addDriver: 'Add driver',
+  driverName: 'Driver name',
+  driverPhone: 'Phone',
+  driverPin: 'PIN',
+  add: 'Add',
+  done: 'Done',
+  // analytics
+  today: 'Today',
+  ordersToday: 'Orders',
+  deliveredToday: 'Delivered',
+  avgTime: 'Avg time',
+  collected: 'Collected',
+  outstanding: 'Outstanding',
+  minsShort: '{n} min',
+  nearest: 'nearest',
 };
 
 const ar: Dict = {
@@ -122,6 +141,25 @@ const ar: Dict = {
   iftarIn: 'فاضل على الفطار {time} · جهّز السواقين 🌙',
   iftarPassed: 'رمضان كريم 🌙 · وقت الفطار',
   iftarTimeLabel: 'موعد الفطار',
+  // onboarding
+  getStarted: 'يلا نبدأ',
+  step1Driver: 'ضيف أول سواق',
+  step2Order: 'اعمل أول طلب',
+  addDriver: 'إضافة سواق',
+  driverName: 'اسم السواق',
+  driverPhone: 'التليفون',
+  driverPin: 'الرقم السري',
+  add: 'إضافة',
+  done: 'تمام',
+  // analytics
+  today: 'النهاردة',
+  ordersToday: 'الطلبات',
+  deliveredToday: 'اتسلّم',
+  avgTime: 'متوسط الوقت',
+  collected: 'المُحصّل',
+  outstanding: 'المتبقّي',
+  minsShort: '{n} د',
+  nearest: 'الأقرب',
 };
 
 const dicts: Record<Lang, Dict> = { en, ar };

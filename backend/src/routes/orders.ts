@@ -5,12 +5,62 @@
  */
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 import { pushDashboardEvent } from '../ws/tracking';
 import { getDriverCashDrawer, settleDriverCash } from '../services/cashDrawer';
 import { requireManager, requireDriver } from '../services/auth';
 
 const prisma = new PrismaClient();
 export const orderRouter = Router();
+
+// Onboarding: add a driver to the fleet (name + phone + PIN).
+orderRouter.post('/drivers', requireManager, async (req, res) => {
+  const { name, phone, password } = req.body;
+  if (!name || !phone || !password) return res.status(400).json({ error: 'missing fields' });
+  const exists = await prisma.driver.findFirst({ where: { phone } });
+  if (exists) return res.status(409).json({ error: 'phone already registered' });
+  const driver = await prisma.driver.create({
+    data: {
+      restaurantId: req.auth!.restaurantId,
+      name, phone,
+      passwordHash: bcrypt.hashSync(password, 10),
+      status: 'Offline',
+    },
+    select: { id: true, name: true, phone: true, status: true, currentLat: true, currentLng: true, lastSeenAt: true },
+  });
+  pushDashboardEvent(req.auth!.restaurantId, { type: 'driver_added', driver });
+  res.status(201).json(driver);
+});
+
+// Today's analytics for the dashboard strip.
+orderRouter.get('/analytics', requireManager, async (req, res) => {
+  const rid = req.auth!.restaurantId;
+  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+
+  const orders = await prisma.order.findMany({
+    where: { restaurantId: rid, createdAt: { gte: startOfDay } },
+    select: { status: true, totalCashToCollect: true, settled: true, assignedAt: true, deliveredAt: true },
+  });
+
+  const delivered = orders.filter((o) => o.status === 'Delivered');
+  const collected = delivered.reduce((s, o) => s + o.totalCashToCollect, 0);
+  const settled = delivered.filter((o) => o.settled).reduce((s, o) => s + o.totalCashToCollect, 0);
+
+  // Average delivery time = deliveredAt - assignedAt, in minutes.
+  const times = delivered
+    .filter((o) => o.assignedAt && o.deliveredAt)
+    .map((o) => (o.deliveredAt!.getTime() - o.assignedAt!.getTime()) / 60000);
+  const avgMinutes = times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null;
+
+  const egp = (p: number) => (p / 100).toLocaleString('en-EG', { minimumFractionDigits: 2 });
+  res.json({
+    ordersToday: orders.length,
+    deliveredToday: delivered.length,
+    avgDeliveryMinutes: avgMinutes,
+    collectedEGP: egp(collected),
+    outstandingEGP: egp(collected - settled),
+  });
+});
 
 // Update business settings (Ramadan mode + iftar time).
 orderRouter.patch('/business', requireManager, async (req, res) => {
@@ -49,7 +99,7 @@ orderRouter.get('/state', requireManager, async (req, res) => {
   const [business, drivers, orders] = await Promise.all([
     prisma.restaurant.findUnique({
       where: { id: rid },
-      select: { name: true, businessType: true, ramadanMode: true, iftarTime: true },
+      select: { name: true, businessType: true, ramadanMode: true, iftarTime: true, shopLat: true, shopLng: true },
     }),
     prisma.driver.findMany({
       where: { restaurantId: rid },

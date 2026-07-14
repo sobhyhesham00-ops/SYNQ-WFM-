@@ -5,10 +5,20 @@ import { useTracking } from './useTracking';
 import { Login } from './Login';
 import { Signup } from './Signup';
 import { RamadanBanner } from './RamadanBanner';
+import { Onboarding } from './Onboarding';
+import { Analytics } from './Analytics';
 import { useLang } from './i18n';
 
 const initials = (name: string) =>
   name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+
+// Haversine distance in km — used to suggest the nearest idle driver to the shop.
+function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371, toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
 
 export default function App() {
   const { t, lang, setLang } = useLang();
@@ -20,7 +30,23 @@ export default function App() {
   const [route, setRoute] = useState<{ lat: number; lng: number }[] | null>(null);
   const [replayDriver, setReplayDriver] = useState<string | null>(null);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
+  const [refreshKey, setRefreshKey] = useState(0);
   const { pins, drawers } = useTracking(WS_BASE, token ?? '');
+
+  // Order idle drivers by proximity to the shop (nearest first) for assignment.
+  function driversByProximity() {
+    const shop = business?.shopLat != null && business?.shopLng != null
+      ? { lat: business.shopLat, lng: business.shopLng } : null;
+    const idle = drivers.filter((d) => d.status !== 'Offline');
+    if (!shop) return idle.map((d) => ({ d, km: null as number | null }));
+    return idle
+      .map((d) => ({
+        d,
+        km: d.currentLat != null && d.currentLng != null
+          ? distanceKm(shop, { lat: d.currentLat, lng: d.currentLng }) : null,
+      }))
+      .sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
+  }
 
   async function toggleRamadan() {
     if (!business) return;
@@ -40,7 +66,10 @@ export default function App() {
   }
 
   const refresh = () =>
-    token && api.state(token).then((s) => { setBusiness(s.business); setDrivers(s.drivers); setOrders(s.orders); });
+    token && api.state(token).then((s) => {
+      setBusiness(s.business); setDrivers(s.drivers); setOrders(s.orders);
+      setRefreshKey((k) => k + 1);
+    });
 
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [token]);
 
@@ -111,6 +140,11 @@ export default function App() {
             <button className="hero-chip">📦 {t('openOrders', { n: orders.filter((o) => o.status !== 'Delivered').length })}</button>
           </div>
         </div>
+
+        {/* Onboarding checklist for a fresh business, else today's analytics */}
+        {(drivers.length === 0 || orders.length === 0)
+          ? <Onboarding token={token} hasDriver={drivers.length > 0} hasOrder={orders.length > 0} onChange={refresh} />
+          : <Analytics token={token} refreshKey={refreshKey} />}
 
         {/* Cash drawer per driver */}
         <div className="section-head"><h3>{t('cashDrawer')}</h3><a>{t('endOfShift')}</a></div>
@@ -195,8 +229,12 @@ export default function App() {
                     onChange={(e) => e.target.value && api.assign(token, o.id, e.target.value).then(refresh)}
                   >
                     <option value="" disabled>{t('assignTo')}</option>
-                    {drivers.filter((d) => d.status !== 'Offline').map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
+                    {driversByProximity().map(({ d, km }, i) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                        {km != null ? ` · ${km.toFixed(1)} km` : ''}
+                        {i === 0 && km != null ? ` · 🎯 ${t('nearest')}` : ''}
+                      </option>
                     ))}
                   </select>
                 )}

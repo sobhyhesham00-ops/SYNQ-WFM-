@@ -97,6 +97,26 @@ body {
   font-size: 12px; cursor: pointer; padding: 0; white-space: nowrap; text-decoration: none; }
 .link-btn:hover { text-decoration: underline; }
 
+/* onboarding checklist */
+.onboard { background: var(--panel); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-sm);
+  border: 1px dashed color-mix(in srgb, var(--brand) 40%, var(--line)); display: flex; flex-direction: column; gap: 10px; }
+.onboard-head { font-weight: 800; font-size: 15px; }
+.onboard-step { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; }
+.onboard-check { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); font-weight: 800; font-size: 12px; flex: none; }
+.onboard-step.ok { color: var(--muted); }
+.onboard-step.ok .onboard-check { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.onboard-form { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 4px 34px; }
+:root[dir="rtl"] .onboard-form { padding: 4px 34px 4px 0; }
+
+/* analytics strip */
+.analytics { background: var(--panel); border-radius: 16px; padding: 14px; box-shadow: var(--shadow-sm); }
+.analytics-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+.analytics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stat-tile { text-align: center; }
+.stat-val { font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+.stat-label { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
 /* signup business-type picker */
 .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 2px 0 4px; }
 .type-chip { border: 1px solid var(--line); background: #fbfaff; border-radius: 14px; cursor: pointer;

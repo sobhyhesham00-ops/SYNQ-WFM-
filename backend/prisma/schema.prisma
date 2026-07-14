@@ -43,6 +43,9 @@ model Restaurant {
   // manager gets drivers ready before the maghrib (sunset) surge.
   ramadanMode  Boolean      @default(false)
   iftarTime    String?      // "HH:mm" local, e.g. "18:05"
+  // Shop location — pickup point used to suggest the nearest idle driver.
+  shopLat      Float?
+  shopLng      Float?
   createdAt    DateTime     @default(now())
 
   drivers Driver[]

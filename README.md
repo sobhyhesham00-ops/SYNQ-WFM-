@@ -30,6 +30,16 @@ delivery peak — so managers get drivers ready. The **driver app** logs in
 against the real API (phone + PIN → JWT in secure storage) and loads its live
 orders, earnings, and delivery flow from the backend.
 
+| Onboarding checklist (fresh signup) | Today's analytics strip |
+|---|---|
+| ![Onboarding](docs/screenshots/onboarding.png) | ![Analytics](docs/screenshots/analytics.png) |
+
+**Onboarding:** a fresh business sees a "Get started" checklist (add first
+driver → create first order) instead of an empty page. **Analytics:** a live
+"today" strip — orders, delivered, avg delivery time, cash collected.
+**Smart assignment:** the assign dropdown ranks idle drivers by distance from
+the shop (Haversine over live GPS) and flags the 🎯 nearest one.
+
 ## Screenshots
 
 The dashboard running against the real backend (Postgres + WebSocket). Street

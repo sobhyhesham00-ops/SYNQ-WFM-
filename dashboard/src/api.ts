@@ -13,6 +13,11 @@ export const BUSINESS_TYPES: BusinessType[] =
 export interface Business {
   name: string; businessType: BusinessType;
   ramadanMode?: boolean; iftarTime?: string | null;
+  shopLat?: number | null; shopLng?: number | null;
+}
+export interface Analytics {
+  ordersToday: number; deliveredToday: number;
+  avgDeliveryMinutes: number | null; collectedEGP: string; outstandingEGP: string;
 }
 
 export interface Order {
@@ -50,6 +55,11 @@ export const api = {
 
   updateBusiness: (token: string, patch: { ramadanMode?: boolean; iftarTime?: string | null }) =>
     req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  addDriver: (token: string, d: { name: string; phone: string; password: string }): Promise<Driver> =>
+    req('/api/drivers', token, { method: 'POST', body: JSON.stringify(d) }),
+
+  analytics: (token: string): Promise<Analytics> => req('/api/analytics', token),
 
   state: (token: string): Promise<{ business: Business; drivers: Driver[]; orders: Order[] }> =>
     req('/api/state', token),

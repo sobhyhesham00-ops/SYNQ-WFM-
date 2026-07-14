@@ -13,7 +13,8 @@ async function main() {
   const hash = (s: string) => bcrypt.hashSync(s, 10);
 
   const restaurant = await prisma.restaurant.create({
-    data: { name: 'Koshary El Tahrir', phone: '0223900000', businessType: 'Restaurant' },
+    data: { name: 'Koshary El Tahrir', phone: '0223900000', businessType: 'Restaurant',
+      shopLat: 30.0450, shopLng: 31.2360 },
   });
 
   await prisma.managerUser.create({
@@ -56,9 +57,11 @@ async function main() {
     data: [
       { restaurantId: restaurant.id, driverId: d2.id, customerAddress: '12 Sherif St, Downtown',
         landmark: 'Over the pharmacy, next to the mosque', customerPhone: '01011112222',
-        totalCashToCollect: 12500, status: 'Delivered', deliveredAt: new Date() },
+        totalCashToCollect: 12500, status: 'Delivered',
+        assignedAt: new Date(Date.now() - 28 * 60000), deliveredAt: new Date() },
       { restaurantId: restaurant.id, driverId: d2.id, customerAddress: '8 Talaat Harb Sq',
-        totalCashToCollect: 8000, status: 'Delivered', deliveredAt: new Date() },
+        totalCashToCollect: 8000, status: 'Delivered',
+        assignedAt: new Date(Date.now() - 19 * 60000), deliveredAt: new Date() },
       { restaurantId: restaurant.id, driverId: d1.id, customerAddress: '30 Kasr El Nil St',
         landmark: 'Yellow building, 3rd floor', customerPhone: '01033334444',
         totalCashToCollect: 20000, status: 'PickedUp' },
