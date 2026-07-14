@@ -93,6 +93,9 @@ model Order {
   totalCashToCollect Int
   status           OrderStatus @default(Pending)
 
+  // Opaque token for the public customer tracking link (/t/:token). No auth.
+  publicToken      String   @unique @default(uuid())
+
   createdAt   DateTime  @default(now())
   assignedAt  DateTime?
   deliveredAt DateTime?

@@ -1,22 +1,17 @@
 # Meshwar backend — REST + WebSocket in one small container.
-FROM node:20-slim AS build
+# Runs TypeScript directly with tsx (no build step; avoids ESM extension pitfalls).
+FROM node:20-slim
 WORKDIR /app
+
+# OpenSSL is needed by Prisma's query engine on slim images.
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json* ./
 RUN npm install
 COPY prisma ./prisma
 RUN npx prisma generate
-COPY tsconfig.json ./
-COPY src ./src
-RUN npm run build
+COPY . .
 
-FROM node:20-slim
-WORKDIR /app
-ENV NODE_ENV=production
-COPY package.json package-lock.json* ./
-RUN npm install --omit=dev
-COPY prisma ./prisma
-RUN npx prisma generate
-COPY --from=build /app/dist ./dist
 EXPOSE 8080
-# Apply migrations then boot. (For prod, run migrate deploy as a release step.)
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+# Sync schema then boot. For production, swap db push for `prisma migrate deploy`.
+CMD ["sh", "-c", "npx prisma db push --skip-generate && npx tsx src/server.ts"]

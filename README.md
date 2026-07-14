@@ -17,6 +17,10 @@ replay are driven by seeded backend data.
 |---|---|
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Route replay](docs/screenshots/route-replay.png) |
 
+Customer-facing live tracking link (`/t/:token`, no login — shareable by SMS):
+
+![Customer tracking](docs/screenshots/customer-tracking.png)
+
 ## Repo layout
 
 ```

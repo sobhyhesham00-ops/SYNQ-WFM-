@@ -93,6 +93,10 @@ body {
 .ghost-pill:hover { border-color: var(--brand-2); }
 .ghost-pill.on { background: var(--brand); color: #fff; border-color: var(--brand); }
 
+.link-btn { border: none; background: transparent; color: var(--brand); font-weight: 700;
+  font-size: 12px; cursor: pointer; padding: 0; white-space: nowrap; }
+.link-btn:hover { text-decoration: underline; }
+
 .replay-banner { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
   border: none; cursor: pointer; background: rgba(124,92,255,.95); color: #fff; font-weight: 700;
   font-size: 13px; padding: 10px 18px; border-radius: 999px; box-shadow: var(--shadow);

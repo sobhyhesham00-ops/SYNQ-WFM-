@@ -6,6 +6,7 @@ import '../theme.dart';
 import '../services/location_service.dart';
 import '../services/api_client.dart';
 import 'delivery_screen.dart';
+import 'earnings_screen.dart';
 
 // In the real app base URL + JWT come from config + secure storage (set at login).
 const _apiBase = String.fromEnvironment('API_BASE', defaultValue: 'https://api.meshwar.app');
@@ -58,9 +59,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 6),
                   const Text('مشوار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: MeshwarColors.muted)),
                 ]),
-                CircleAvatar(backgroundColor: Colors.white,
-                  child: Text(widget.driverName.characters.first,
-                    style: const TextStyle(color: MeshwarColors.brand, fontWeight: FontWeight.w700))),
+                Row(children: [
+                  IconButton(
+                    tooltip: 'My cash',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const EarningsScreen())),
+                    icon: const Icon(Icons.account_balance_wallet_outlined, color: MeshwarColors.brand),
+                  ),
+                  CircleAvatar(backgroundColor: Colors.white,
+                    child: Text(widget.driverName.characters.first,
+                      style: const TextStyle(color: MeshwarColors.brand, fontWeight: FontWeight.w700))),
+                ]),
               ],
             ),
             const SizedBox(height: 18),

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, egp, WS_BASE, type Driver, type Order } from './api';
+import { api, egp, WS_BASE, API_BASE, type Driver, type Order } from './api';
 import { LiveMap } from './LiveMap';
 import { useTracking } from './useTracking';
 import { Login } from './Login';
@@ -150,13 +150,27 @@ export default function App() {
                   </select>
                 )}
               </div>
-              <span className="subtle" style={{ fontWeight: 600 }}>
-                <span
-                  className="status-dot"
-                  style={{ background: o.status === 'Delivered' ? 'var(--ok)' : o.status === 'Pending' ? '#f0a500' : 'var(--brand)' }}
-                />
-                {o.status}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                <span className="subtle" style={{ fontWeight: 600 }}>
+                  <span
+                    className="status-dot"
+                    style={{ background: o.status === 'Delivered' ? 'var(--ok)' : o.status === 'Pending' ? '#f0a500' : 'var(--brand)' }}
+                  />
+                  {o.status}
+                </span>
+                {(o.status === 'Assigned' || o.status === 'PickedUp') && (
+                  <button
+                    className="link-btn"
+                    onClick={() => {
+                      const url = `${API_BASE}/t/${o.publicToken}`;
+                      navigator.clipboard?.writeText(url);
+                      alert(`Customer tracking link copied:\n${url}`);
+                    }}
+                  >
+                    🔗 Share tracking
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

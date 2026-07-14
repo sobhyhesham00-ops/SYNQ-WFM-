@@ -10,6 +10,7 @@ export interface Driver {
 export interface Order {
   id: string; customerAddress: string; totalCashToCollect: number;
   status: string; driverId: string | null; deliveredAt: string | null; settled: boolean;
+  publicToken: string;
 }
 
 async function req(path: string, token: string, init?: RequestInit) {
