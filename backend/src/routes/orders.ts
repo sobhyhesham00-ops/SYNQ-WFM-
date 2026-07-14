@@ -92,16 +92,18 @@ orderRouter.get('/analytics', requireManager, async (req, res) => {
   });
 });
 
-// Update business settings (Ramadan mode + iftar time).
+// Update business settings (Ramadan mode + iftar time + subscription plan).
 orderRouter.patch('/business', requireManager, async (req, res) => {
-  const { ramadanMode, iftarTime } = req.body;
-  const data: { ramadanMode?: boolean; iftarTime?: string | null } = {};
+  const { ramadanMode, iftarTime, plan } = req.body;
+  const PLANS = ['Free', 'Starter', 'Growth', 'Chain'];
+  const data: { ramadanMode?: boolean; iftarTime?: string | null; plan?: string } = {};
   if (typeof ramadanMode === 'boolean') data.ramadanMode = ramadanMode;
   if (iftarTime !== undefined) data.iftarTime = iftarTime || null;
+  if (PLANS.includes(plan)) data.plan = plan;
   const biz = await prisma.restaurant.update({
     where: { id: req.auth!.restaurantId },
-    data,
-    select: { name: true, businessType: true, ramadanMode: true, iftarTime: true },
+    data: data as never,
+    select: { name: true, businessType: true, plan: true, ramadanMode: true, iftarTime: true },
   });
   res.json(biz);
 });
@@ -129,7 +131,7 @@ orderRouter.get('/state', requireManager, async (req, res) => {
   const [business, drivers, orders] = await Promise.all([
     prisma.restaurant.findUnique({
       where: { id: rid },
-      select: { name: true, businessType: true, ramadanMode: true, iftarTime: true, shopLat: true, shopLng: true },
+      select: { name: true, businessType: true, plan: true, ramadanMode: true, iftarTime: true, shopLat: true, shopLng: true },
     }),
     prisma.driver.findMany({
       where: { restaurantId: rid },

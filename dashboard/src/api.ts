@@ -11,8 +11,9 @@ export interface Driver {
 export type BusinessType = 'Restaurant' | 'Takeaway' | 'Pharmacy' | 'Grocery' | 'Minimarket' | 'Kiosk' | 'Other';
 export const BUSINESS_TYPES: BusinessType[] =
   ['Restaurant', 'Takeaway', 'Pharmacy', 'Grocery', 'Minimarket', 'Kiosk', 'Other'];
+export type PlanTier = 'Free' | 'Starter' | 'Growth' | 'Chain';
 export interface Business {
-  name: string; businessType: BusinessType;
+  name: string; businessType: BusinessType; plan?: PlanTier;
   ramadanMode?: boolean; iftarTime?: string | null;
   shopLat?: number | null; shopLng?: number | null;
 }
@@ -54,7 +55,7 @@ export const api = {
       body: JSON.stringify(body),
     }).then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json().catch(() => ({}))).error || 'signup failed')))),
 
-  updateBusiness: (token: string, patch: { ramadanMode?: boolean; iftarTime?: string | null }) =>
+  updateBusiness: (token: string, patch: { ramadanMode?: boolean; iftarTime?: string | null; plan?: PlanTier }) =>
     req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),
 
   addDriver: (token: string, d: { name: string; phone: string; password: string }): Promise<Driver> =>

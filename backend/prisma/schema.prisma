@@ -18,6 +18,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Subscription tier (billing is out-of-band via Fawry/wallet; this just records
+// what the merchant is on and drives plan-based limits/badges).
+enum PlanTier {
+  Free
+  Starter
+  Growth
+  Chain
+}
+
 // The kind of merchant using El Kaptin. Drives the UI's vocabulary per vertical.
 // Covers Egypt's small-merchant long tail: eateries, pharmacies, groceries
 // (بقالة), mini-markets, the ubiquitous street kiosk (كشك), and a catch-all.
@@ -39,6 +48,7 @@ model Restaurant {
   name         String
   phone        String?
   businessType BusinessType @default(Restaurant)
+  plan         PlanTier     @default(Free)
   // Ramadan ops: when on, the dashboard shows an iftar-rush countdown so the
   // manager gets drivers ready before the maghrib (sunset) surge.
   ramadanMode  Boolean      @default(false)

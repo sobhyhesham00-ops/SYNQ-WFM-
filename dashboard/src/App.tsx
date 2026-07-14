@@ -7,6 +7,7 @@ import { Signup } from './Signup';
 import { RamadanBanner } from './RamadanBanner';
 import { Onboarding } from './Onboarding';
 import { Analytics } from './Analytics';
+import { Plans } from './Plans';
 import { useLang } from './i18n';
 
 const initials = (name: string) =>
@@ -31,6 +32,7 @@ export default function App() {
   const [replayDriver, setReplayDriver] = useState<string | null>(null);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showPlans, setShowPlans] = useState(false);
   const { pins, drawers } = useTracking(WS_BASE, token ?? '');
 
   // Order idle drivers by proximity to the shop (nearest first) for assignment.
@@ -96,6 +98,10 @@ export default function App() {
   const activeCount = drivers.filter((d) => d.status !== 'Offline').length;
   const isPharmacy = business?.businessType === 'Pharmacy';
 
+  const plansModal = showPlans && business ? (
+    <Plans token={token!} current={business.plan ?? 'Free'} onClose={() => setShowPlans(false)} onChange={refresh} />
+  ) : null;
+
   if (!token) {
     return authView === 'signup'
       ? <Signup onLogin={onLogin} onSwitch={() => setAuthView('login')} />
@@ -104,6 +110,7 @@ export default function App() {
 
   return (
     <div className="app">
+      {plansModal}
       <div className="map-pane">
         <LiveMap drivers={drivers} livePins={pins} route={route} />
         {replayDriver && (
@@ -118,6 +125,11 @@ export default function App() {
           <div className="brand">
             <span className="brand-dot" /> El Kaptin <span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 700 }}>الكابتن</span>
             {business && <span className="biz-badge">{t(`biz.${business.businessType}`)}</span>}
+            {business && (
+              <button className="plan-chip" onClick={() => setShowPlans(true)} title={t('choosePlan')}>
+                ⭐ {t(`plan.${business.plan ?? 'Free'}`)}
+              </button>
+            )}
           </div>
           <div className="row" style={{ gap: 8 }}>
             <button className={`ghost-btn ${business?.ramadanMode ? 'moon-on' : ''}`} title="Ramadan mode" onClick={toggleRamadan}>🌙</button>
