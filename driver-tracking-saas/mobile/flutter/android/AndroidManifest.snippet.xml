@@ -1,0 +1,37 @@
+<!-- Merge these into android/app/src/main/AndroidManifest.xml  (Blueprint §3) -->
+<!-- These permissions + the foreground service declaration are what keep
+     tracking alive when the screen is locked or the driver is in Google Maps. -->
+
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<!-- Required on Android 10+ so tracking continues when app is backgrounded. -->
+<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<!-- Android 14+ requires the typed foreground-service permission. -->
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<!-- Lets you send the user to the OEM auto-start / battery settings screen. -->
+<uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+<application ...>
+
+  <!-- flutter_background_service's foreground service, typed as "location". -->
+  <service
+      android:name="id.flutter.flutter_background_service.BackgroundService"
+      android:foregroundServiceType="location"
+      android:exported="false" />
+
+</application>
+
+<!--
+  CRITICAL for Egypt-market phones (Xiaomi/MIUI, Realme/ColorOS, Samsung):
+  Permissions alone are NOT enough. Each OEM has an "Autostart" / "Battery
+  saver" allow-list the user must toggle ON manually, or the OS kills the
+  service overnight. In the app onboarding:
+    1. Request "Allow all the time" location (background), not just "while using".
+    2. Prompt REQUEST_IGNORE_BATTERY_OPTIMIZATIONS.
+    3. Deep-link the driver to the OEM autostart screen (use a package like
+       `disable_battery_optimization` or a per-OEM intent) with a short guide.
+-->

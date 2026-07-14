@@ -1,0 +1,39 @@
+rules_version = '2';
+// Minimal tenant-isolation rules for the Firestore variant.
+// Assumes custom claims: request.auth.token.restaurantId and .role.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /restaurants/{rid} {
+      allow read: if request.auth.token.restaurantId == rid;
+
+      // Managers/cashiers manage orders; drivers can update their own doc + status.
+      match /orders/{orderId} {
+        allow read: if request.auth.token.restaurantId == rid;
+        allow create, update, delete:
+          if request.auth.token.restaurantId == rid
+          && request.auth.token.role in ['manager', 'cashier'];
+        // Driver may only flip status of their own assigned order.
+        allow update:
+          if request.auth.token.restaurantId == rid
+          && resource.data.driverId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'deliveredAt']);
+      }
+
+      match /drivers/{driverId} {
+        allow read: if request.auth.token.restaurantId == rid;
+        // A driver may only write their own location/status.
+        allow update:
+          if request.auth.uid == driverId
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['currentLat', 'currentLng', 'lastSeenAt', 'status']);
+
+        match /location_logs/{logId} {
+          allow create: if request.auth.uid == driverId;
+          allow read:   if request.auth.token.restaurantId == rid;
+        }
+      }
+    }
+  }
+}
