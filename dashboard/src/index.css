@@ -165,6 +165,13 @@ body {
 .plan-feats { margin: 6px 0 10px; padding-inline-start: 16px; font-size: 12px; color: var(--muted); }
 .plan-feats li { margin: 4px 0; }
 
+/* daily summary */
+.summary-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 14px; }
+.summary-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 4px;
+  border-bottom: 1px solid var(--line); font-size: 14px; }
+.summary-row:last-child { border-bottom: none; }
+.summary-row b { font-size: 16px; }
+
 /* billing cycle toggle */
 .cycle-toggle { display: inline-flex; background: #f1eefb; border-radius: 999px; padding: 3px; gap: 2px; }
 .cycle-toggle button { border: none; background: transparent; cursor: pointer; padding: 7px 14px;

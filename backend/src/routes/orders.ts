@@ -81,6 +81,41 @@ orderRouter.get('/reports/cash.csv', requireManager, async (req, res) => {
   res.send(rows.join('\n'));
 });
 
+// Owner daily-summary — a light end-of-day recap (available on every plan).
+orderRouter.get('/summary/today', requireManager, async (req, res) => {
+  const rid = req.auth!.restaurantId;
+  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+
+  const [biz, orders, deliveredUnsettled, drivers] = await Promise.all([
+    prisma.restaurant.findUnique({ where: { id: rid }, select: { name: true } }),
+    prisma.order.findMany({
+      where: { restaurantId: rid, createdAt: { gte: startOfDay } },
+      select: { status: true, totalCashToCollect: true },
+    }),
+    prisma.order.findMany({
+      where: { restaurantId: rid, status: 'Delivered', settled: false },
+      select: { totalCashToCollect: true },
+    }),
+    prisma.driver.findMany({ where: { restaurantId: rid }, select: { status: true } }),
+  ]);
+
+  const delivered = orders.filter((o) => o.status === 'Delivered');
+  const collected = delivered.reduce((s, o) => s + o.totalCashToCollect, 0);
+  const outstanding = deliveredUnsettled.reduce((s, o) => s + o.totalCashToCollect, 0);
+  const egp = (p: number) => (p / 100).toLocaleString('en-EG', { minimumFractionDigits: 2 });
+
+  res.json({
+    businessName: biz?.name ?? '',
+    date: startOfDay.toISOString().slice(0, 10),
+    deliveries: delivered.length,
+    openOrders: orders.filter((o) => o.status !== 'Delivered' && o.status !== 'Cancelled').length,
+    collectedEGP: egp(collected),
+    outstandingEGP: egp(outstanding),
+    activeDrivers: drivers.filter((d) => d.status !== 'Offline').length,
+    totalDrivers: drivers.length,
+  });
+});
+
 // Driver-performance leaderboard over the last N days (default 7). Growth+ only.
 orderRouter.get('/leaderboard', requireManager, async (req, res) => {
   if (!(await gate(res, req.auth!.restaurantId, 'analytics'))) return;
