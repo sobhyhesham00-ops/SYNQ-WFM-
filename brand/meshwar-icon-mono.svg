@@ -1,0 +1,10 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Meshwar icon (monochrome)">
+  <!-- Single-colour mark for stamps, receipts, embossing. Uses currentColor. -->
+  <g fill="currentColor" stroke="currentColor">
+    <path d="M150 372 C 150 300, 250 320, 256 256 C 262 192, 210 176, 256 132"
+          stroke-width="24" stroke-linecap="round" fill="none" stroke-dasharray="0.1 42"/>
+    <circle cx="150" cy="372" r="26" stroke="none"/>
+    <path d="M356 92 C 309 92, 288 129, 288 163 C 288 209, 356 254, 356 254 C 356 254, 424 209, 424 163 C 424 129, 403 92, 356 92 Z" stroke="none"/>
+    <circle cx="356" cy="161" r="24" fill="#fff" stroke="none"/>
+  </g>
+</svg>

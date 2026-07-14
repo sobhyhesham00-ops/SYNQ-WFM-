@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Meshwar icon (light background)">
+  <defs>
+    <linearGradient id="mgL" x1="120" y1="90" x2="420" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C5CFF"/><stop offset=".6" stop-color="#9D7BFF"/><stop offset="1" stop-color="#B79BFF"/>
+    </linearGradient>
+  </defs>
+  <!-- white ground with hairline -->
+  <rect x="2" y="2" width="508" height="508" rx="118" fill="#FFFFFF" stroke="#ECE9F5" stroke-width="4"/>
+  <path d="M150 372 C 150 300, 250 320, 256 256 C 262 192, 210 176, 256 132"
+        stroke="url(#mgL)" stroke-width="24" stroke-linecap="round" fill="none" stroke-dasharray="0.1 42"/>
+  <circle cx="150" cy="372" r="30" fill="url(#mgL)"/><circle cx="150" cy="372" r="12" fill="#fff"/>
+  <path d="M356 92 C 309 92, 288 129, 288 163 C 288 209, 356 254, 356 254 C 356 254, 424 209, 424 163 C 424 129, 403 92, 356 92 Z" fill="url(#mgL)"/>
+  <circle cx="356" cy="161" r="26" fill="#fff"/>
+</svg>

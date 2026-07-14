@@ -5,26 +5,29 @@
       <stop offset="0.55" stop-color="#9D7BFF"/>
       <stop offset="1" stop-color="#B79BFF"/>
     </linearGradient>
-    <filter id="ds" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#3A2A82" flood-opacity="0.35"/>
+    <filter id="ds" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#3A2A82" flood-opacity="0.30"/>
     </filter>
   </defs>
 
   <!-- rounded-square ground -->
-  <rect x="0" y="0" width="512" height="512" rx="120" fill="url(#mg)"/>
+  <rect width="512" height="512" rx="120" fill="url(#mg)"/>
+  <!-- soft top highlight -->
+  <rect width="512" height="512" rx="120" fill="url(#mg)"/>
+  <ellipse cx="150" cy="70" rx="230" ry="120" fill="#ffffff" opacity="0.06"/>
 
-  <!-- the meshwar: a winding route from origin to destination -->
+  <!-- the meshwar: a route from origin to destination -->
   <path d="M150 372 C 150 300, 250 320, 256 256 C 262 192, 210 176, 256 132"
-        stroke="#FFFFFF" stroke-width="26" stroke-linecap="round" fill="none"
-        stroke-dasharray="4 44" opacity="0.95"/>
+        stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" fill="none"
+        stroke-dasharray="0.1 42" opacity="0.9"/>
 
   <!-- origin dot -->
   <circle cx="150" cy="372" r="30" fill="#FFFFFF" filter="url(#ds)"/>
-  <circle cx="150" cy="372" r="13" fill="#7C5CFF"/>
+  <circle cx="150" cy="372" r="12" fill="#7C5CFF"/>
 
   <!-- destination pin -->
   <g filter="url(#ds)">
-    <path d="M356 96 C 312 96, 292 130, 292 162 C 292 205, 356 250, 356 250 C 356 250, 420 205, 420 162 C 420 130, 400 96, 356 96 Z" fill="#FFFFFF"/>
-    <circle cx="356" cy="160" r="26" fill="#7C5CFF"/>
+    <path d="M356 92 C 309 92, 288 129, 288 163 C 288 209, 356 254, 356 254 C 356 254, 424 209, 424 163 C 424 129, 403 92, 356 92 Z" fill="#FFFFFF"/>
+    <circle cx="356" cy="161" r="26" fill="#7C5CFF"/>
   </g>
 </svg>
