@@ -12,12 +12,10 @@
 
   <!-- rounded-square ground -->
   <rect width="512" height="512" rx="120" fill="url(#mg)"/>
-  <!-- soft top highlight -->
-  <rect width="512" height="512" rx="120" fill="url(#mg)"/>
   <ellipse cx="150" cy="70" rx="230" ry="120" fill="#ffffff" opacity="0.06"/>
 
   <!-- the meshwar: a route from origin to destination -->
-  <path d="M150 372 C 150 300, 250 320, 256 256 C 262 192, 210 176, 256 132"
+  <path d="M150 372 C 150 300, 250 320, 256 256 C 262 192, 210 176, 256 128"
         stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" fill="none"
         stroke-dasharray="0.1 42" opacity="0.9"/>
 
@@ -25,9 +23,9 @@
   <circle cx="150" cy="372" r="30" fill="#FFFFFF" filter="url(#ds)"/>
   <circle cx="150" cy="372" r="12" fill="#7C5CFF"/>
 
-  <!-- destination pin -->
+  <!-- destination pin (rounded head) -->
   <g filter="url(#ds)">
-    <path d="M356 92 C 309 92, 288 129, 288 163 C 288 209, 356 254, 356 254 C 356 254, 424 209, 424 163 C 424 129, 403 92, 356 92 Z" fill="#FFFFFF"/>
-    <circle cx="356" cy="161" r="26" fill="#7C5CFF"/>
+    <path d="M356 262 C 320 214, 288 196, 288 150 A 68 68 0 1 1 424 150 C 424 196, 392 214, 356 262 Z" fill="#FFFFFF"/>
+    <circle cx="356" cy="150" r="28" fill="#7C5CFF"/>
   </g>
 </svg>
