@@ -10,14 +10,32 @@ import { pushDashboardEvent } from '../ws/tracking';
 import { getDriverCashDrawer, settleDriverCash } from '../services/cashDrawer';
 import { requireManager, requireDriver } from '../services/auth';
 import { pushTo } from '../services/notify';
+import { planAllows, planDriverCap, PLAN_PRICE, type Plan, type Feature } from '../services/plans';
 
 const prisma = new PrismaClient();
 export const orderRouter = Router();
+
+const planOf = async (rid: string): Promise<Plan> => {
+  const r = await prisma.restaurant.findUnique({ where: { id: rid }, select: { plan: true } });
+  return (r?.plan ?? 'Free') as Plan;
+};
+// Returns true if allowed; otherwise writes a 402 and returns false.
+async function gate(res: import('express').Response, rid: string, f: Feature): Promise<boolean> {
+  if (planAllows(await planOf(rid), f)) return true;
+  res.status(402).json({ error: 'plan_upgrade_required', feature: f });
+  return false;
+}
 
 // Onboarding: add a driver to the fleet (name + phone + PIN).
 orderRouter.post('/drivers', requireManager, async (req, res) => {
   const { name, phone, password } = req.body;
   if (!name || !phone || !password) return res.status(400).json({ error: 'missing fields' });
+  // Enforce the plan's driver cap (existing drivers are grandfathered).
+  const rid = req.auth!.restaurantId;
+  const count = await prisma.driver.count({ where: { restaurantId: rid } });
+  if (count >= planDriverCap(await planOf(rid))) {
+    return res.status(402).json({ error: 'plan_upgrade_required', feature: 'driverCap' });
+  }
   const exists = await prisma.driver.findFirst({ where: { phone } });
   if (exists) return res.status(409).json({ error: 'phone already registered' });
   const driver = await prisma.driver.create({
@@ -35,6 +53,7 @@ orderRouter.post('/drivers', requireManager, async (req, res) => {
 
 // Weekly cash report as CSV (for the owner's books). ?days=7 (default).
 orderRouter.get('/reports/cash.csv', requireManager, async (req, res) => {
+  if (!(await gate(res, req.auth!.restaurantId, 'csv'))) return;
   const days = Math.min(Number(req.query.days) || 7, 90);
   const since = new Date(Date.now() - days * 86400_000);
   const orders = await prisma.order.findMany({
@@ -64,6 +83,7 @@ orderRouter.get('/reports/cash.csv', requireManager, async (req, res) => {
 
 // Today's analytics for the dashboard strip.
 orderRouter.get('/analytics', requireManager, async (req, res) => {
+  if (!(await gate(res, req.auth!.restaurantId, 'analytics'))) return;
   const rid = req.auth!.restaurantId;
   const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
 
@@ -92,10 +112,38 @@ orderRouter.get('/analytics', requireManager, async (req, res) => {
   });
 });
 
+// --- Billing (Fawry-style stub; no real PSP wired) ---
+// Start a checkout: returns a payment reference + amount to pay out-of-band.
+// In production a Fawry webhook would confirm; here /confirm simulates it.
+orderRouter.post('/billing/checkout', requireManager, async (req, res) => {
+  const plan = req.body?.plan as Plan;
+  if (!(plan in PLAN_PRICE)) return res.status(400).json({ error: 'bad plan' });
+  if (plan === 'Free') { // downgrade is instant, no payment
+    await prisma.restaurant.update({ where: { id: req.auth!.restaurantId }, data: { plan } });
+    return res.json({ plan, free: true });
+  }
+  if (plan === 'Chain') return res.json({ plan, contactSales: true });
+  const reference = String(Math.floor(100000000 + Math.random() * 899999999)); // fake Fawry code
+  res.json({ plan, reference, amountEGP: (PLAN_PRICE[plan] / 100).toFixed(2) });
+});
+
+// Confirm payment (stub for the Fawry webhook) → activate the plan.
+orderRouter.post('/billing/confirm', requireManager, async (req, res) => {
+  const plan = req.body?.plan as Plan;
+  if (!(plan in PLAN_PRICE)) return res.status(400).json({ error: 'bad plan' });
+  const biz = await prisma.restaurant.update({
+    where: { id: req.auth!.restaurantId }, data: { plan },
+    select: { plan: true },
+  });
+  res.json({ ok: true, plan: biz.plan });
+});
+
 // Update business settings (Ramadan mode + iftar time + subscription plan).
 orderRouter.patch('/business', requireManager, async (req, res) => {
   const { ramadanMode, iftarTime, plan } = req.body;
   const PLANS = ['Free', 'Starter', 'Growth', 'Chain'];
+  // Enabling Ramadan mode requires the plan that includes it.
+  if (ramadanMode === true && !(await gate(res, req.auth!.restaurantId, 'ramadan'))) return;
   const data: { ramadanMode?: boolean; iftarTime?: string | null; plan?: string } = {};
   if (typeof ramadanMode === 'boolean') data.ramadanMode = ramadanMode;
   if (iftarTime !== undefined) data.iftarTime = iftarTime || null;
@@ -111,6 +159,7 @@ orderRouter.patch('/business', requireManager, async (req, res) => {
 // Route replay: a driver's location history for the map polyline.
 // Optional ?from=ISO&to=ISO time window; defaults to the last 4 hours.
 orderRouter.get('/drivers/:id/route', requireManager, async (req, res) => {
+  if (!(await gate(res, req.auth!.restaurantId, 'routeReplay'))) return;
   const to = req.query.to ? new Date(String(req.query.to)) : new Date();
   const from = req.query.from
     ? new Date(String(req.query.from))
@@ -240,6 +289,7 @@ orderRouter.post('/orders/:id/status', requireDriver, async (req, res) => {
 
 // Cashier settles a driver's cash at end of shift.
 orderRouter.post('/drivers/:id/settle', requireManager, async (req, res) => {
+  if (!(await gate(res, req.auth!.restaurantId, 'cashDrawer'))) return;
   const result = await settleDriverCash(req.params.id);
   pushDashboardEvent(req.auth!.restaurantId, {
     type: 'cash_settled',

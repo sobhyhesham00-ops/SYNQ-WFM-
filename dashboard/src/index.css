@@ -164,6 +164,18 @@ body {
 .plan-price small { font-size: 11px; color: var(--muted); font-weight: 600; }
 .plan-feats { margin: 6px 0 10px; padding-inline-start: 16px; font-size: 12px; color: var(--muted); }
 .plan-feats li { margin: 4px 0; }
+
+/* fawry checkout */
+.fawry-box { text-align: center; background: color-mix(in srgb, var(--brand) 8%, #fff); border: 1px dashed var(--brand);
+  border-radius: 16px; padding: 18px; margin: 6px 0 12px; }
+.fawry-code { font-size: 30px; font-weight: 800; letter-spacing: 4px; color: var(--brand); font-variant-numeric: tabular-nums; }
+.fawry-amount { font-weight: 800; font-size: 18px; margin-top: 4px; }
+
+/* locked feature card */
+.locked-card { width: 100%; border: 1px dashed color-mix(in srgb, var(--brand) 45%, var(--line));
+  background: color-mix(in srgb, var(--brand) 6%, transparent); color: var(--brand); font-weight: 700;
+  font-size: 13px; padding: 14px; border-radius: 16px; cursor: pointer; }
+.locked-card:hover { background: color-mix(in srgb, var(--brand) 10%, transparent); }
 .rating-badge { font-size: 11px; font-weight: 700; color: #b8860b; margin-inline-start: 8px;
   background: #fff6da; padding: 2px 8px; border-radius: 999px; }
 

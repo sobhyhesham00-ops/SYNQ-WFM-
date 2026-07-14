@@ -8,6 +8,7 @@ import { RamadanBanner } from './RamadanBanner';
 import { Onboarding } from './Onboarding';
 import { Analytics } from './Analytics';
 import { Plans } from './Plans';
+import { can, type Feature } from './plans';
 import { useLang } from './i18n';
 
 const initials = (name: string) =>
@@ -53,6 +54,7 @@ export default function App() {
   async function toggleRamadan() {
     if (!business) return;
     const next = !business.ramadanMode;
+    if (next && !gated('ramadan')) return; // enabling requires the Growth plan
     const b = await api.updateBusiness(token!, {
       ramadanMode: next,
       iftarTime: business.iftarTime || '18:05',
@@ -62,6 +64,7 @@ export default function App() {
 
   async function toggleReplay(driverId: string) {
     if (replayDriver === driverId) { setRoute(null); setReplayDriver(null); return; }
+    if (!gated('routeReplay')) return;
     const { points } = await api.route(token!, driverId);
     setRoute(points.map((p) => ({ lat: p.lat, lng: p.lng })));
     setReplayDriver(driverId);
@@ -97,6 +100,9 @@ export default function App() {
 
   const activeCount = drivers.filter((d) => d.status !== 'Offline').length;
   const isPharmacy = business?.businessType === 'Pharmacy';
+  const plan = business?.plan ?? 'Free';
+  // Returns true if the plan allows the feature; otherwise opens the upgrade modal.
+  const gated = (f: Feature) => { if (can(plan, f)) return true; setShowPlans(true); return false; };
 
   const plansModal = showPlans && business ? (
     <Plans token={token!} current={business.plan ?? 'Free'} onClose={() => setShowPlans(false)} onChange={refresh} />
@@ -156,12 +162,15 @@ export default function App() {
         {/* Onboarding checklist for a fresh business, else today's analytics */}
         {(drivers.length === 0 || orders.length === 0)
           ? <Onboarding token={token} hasDriver={drivers.length > 0} hasOrder={orders.length > 0} onChange={refresh} />
-          : <Analytics token={token} refreshKey={refreshKey} />}
+          : can(plan, 'analytics')
+            ? <Analytics token={token} refreshKey={refreshKey} />
+            : <button className="locked-card" onClick={() => setShowPlans(true)}>📊 {t('today')} · {t('upgradeToUnlock')} ⭐</button>}
 
         {/* Cash drawer per driver */}
         <div className="section-head">
           <h3>{t('cashDrawer')}</h3>
-          <button className="link-btn" onClick={() => api.exportCashCsv(token)}>⬇ {t('exportCsv')}</button>
+          <button className="link-btn" onClick={() => gated('csv') && api.exportCashCsv(token)}>
+            {can(plan, 'csv') ? '⬇' : '🔒'} {t('exportCsv')}</button>
         </div>
         {drivers.map((d) => {
           const drawer = drawers[d.id];
@@ -192,12 +201,13 @@ export default function App() {
                   className="pill-btn"
                   disabled={!owedEGP}
                   onClick={async () => {
+                    if (!gated('cashDrawer')) return;
                     const r = await api.settle(token, d.id);
                     alert(t('collectedFrom', { amount: r.settledEGP + ' EGP', name: d.name, count: r.orderCount }));
                     refresh();
                   }}
                 >
-                  {t('receivedCash')}
+                  {can(plan, 'cashDrawer') ? t('receivedCash') : `🔒 ${t('receivedCash')}`}
                 </button>
                 <button
                   className={`ghost-pill ${replayDriver === d.id ? 'on' : ''}`}
@@ -232,12 +242,13 @@ export default function App() {
                     <button
                       className="link-btn"
                       onClick={() => {
+                        if (!gated('trackLinks')) return;
                         const url = `${API_BASE}/t/${o.publicToken}`;
                         navigator.clipboard?.writeText(url);
                         alert(t('linkCopied', { url }));
                       }}
                     >
-                      🔗 {t('shareTracking')}
+                      {can(plan, 'trackLinks') ? '🔗' : '🔒'} {t('shareTracking')}
                     </button>
                   )}
                 </div>

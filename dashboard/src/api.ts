@@ -58,6 +58,11 @@ export const api = {
   updateBusiness: (token: string, patch: { ramadanMode?: boolean; iftarTime?: string | null; plan?: PlanTier }) =>
     req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),
 
+  checkout: (token: string, plan: PlanTier): Promise<{ plan: PlanTier; reference?: string; amountEGP?: string; free?: boolean; contactSales?: boolean }> =>
+    req('/api/billing/checkout', token, { method: 'POST', body: JSON.stringify({ plan }) }),
+  confirmPayment: (token: string, plan: PlanTier) =>
+    req('/api/billing/confirm', token, { method: 'POST', body: JSON.stringify({ plan }) }),
+
   addDriver: (token: string, d: { name: string; phone: string; password: string }): Promise<Driver> =>
     req('/api/drivers', token, { method: 'POST', body: JSON.stringify(d) }),
 

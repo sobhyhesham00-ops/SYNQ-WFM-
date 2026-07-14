@@ -108,6 +108,18 @@ const en: Dict = {
   'feat.multiBranch': 'Unlimited drivers · multi-branch',
   'feat.whatsapp': 'WhatsApp notifications',
   'feat.manager': 'Account manager',
+  // checkout + gating
+  payWithFawry: 'Pay with Fawry',
+  fawryRef: 'Fawry code',
+  fawryHow: 'Pay {amount} EGP at any Fawry outlet or in the Fawry app using this code, then tap confirm.',
+  ivePaid: "I've paid — activate",
+  back: 'Back',
+  contactSales: 'Contact sales',
+  planActivated: 'Plan activated 🎉',
+  upgrade: 'Upgrade',
+  upgradeToUnlock: 'Upgrade to unlock',
+  lockedFeature: 'This is a paid feature on your plan',
+  driverLimit: "You've hit your plan's driver limit — upgrade to add more",
 };
 
 const ar: Dict = {
@@ -210,6 +222,18 @@ const ar: Dict = {
   'feat.multiBranch': 'سواقين بلا حد · فروع متعددة',
   'feat.whatsapp': 'إشعارات واتساب',
   'feat.manager': 'مدير حساب',
+  // checkout + gating
+  payWithFawry: 'ادفع بفوري',
+  fawryRef: 'كود فوري',
+  fawryHow: 'ادفع {amount} جنيه من أي منفذ فوري أو من تطبيق فوري بالكود ده، وبعدين اضغط تأكيد.',
+  ivePaid: 'دفعت — فعّل الباقة',
+  back: 'رجوع',
+  contactSales: 'كلّم المبيعات',
+  planActivated: 'اتفعّلت الباقة 🎉',
+  upgrade: 'ترقية',
+  upgradeToUnlock: 'رقّي باقتك عشان تفتحها',
+  lockedFeature: 'الميزة دي مدفوعة في باقتك',
+  driverLimit: 'وصلت للحد الأقصى للسواقين في باقتك — رقّي عشان تضيف أكتر',
 };
 
 const dicts: Record<Lang, Dict> = { en, ar };

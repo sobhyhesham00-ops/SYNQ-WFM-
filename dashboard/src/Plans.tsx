@@ -1,16 +1,17 @@
-// In-app subscription plans. Selecting a plan records it (billing is out-of-band
-// via Fawry/wallet — no payment is processed here).
+// In-app subscription plans + a Fawry-style checkout stub (no real PSP wired —
+// billing is out-of-band; /confirm simulates the Fawry webhook).
+import { useState } from 'react';
 import { api, type PlanTier } from './api';
 import { useLang } from './i18n';
 
-interface Tier {
-  id: PlanTier; price: string; drivers: string; badge?: string; features: string[];
-}
+interface Tier { id: PlanTier; price: string; drivers: string; badge?: string; features: string[]; }
 
 export function Plans({ token, current, onClose, onChange }: {
   token: string; current: PlanTier; onClose: () => void; onChange: () => void;
 }) {
   const { t } = useLang();
+  const [checkout, setCheckout] = useState<{ plan: PlanTier; reference: string; amountEGP: string } | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const tiers: Tier[] = [
     { id: 'Free', price: '0', drivers: '1', features: [t('feat.tracking'), t('feat.history7')] },
@@ -23,11 +24,48 @@ export function Plans({ token, current, onClose, onChange }: {
   ];
 
   async function choose(id: PlanTier) {
-    await api.updateBusiness(token, { plan: id });
-    onChange();
-    onClose();
+    setBusy(true);
+    try {
+      const r = await api.checkout(token, id);
+      if (r.free) { onChange(); onClose(); return; }          // downgrade to Free
+      if (r.contactSales) { alert(t('contactSales')); return; } // Chain = custom
+      setCheckout({ plan: id, reference: r.reference!, amountEGP: r.amountEGP! }); // paid → Fawry
+    } finally { setBusy(false); }
   }
 
+  async function confirmPaid() {
+    if (!checkout) return;
+    setBusy(true);
+    try {
+      await api.confirmPayment(token, checkout.plan);
+      alert(t('planActivated'));
+      onChange(); onClose();
+    } finally { setBusy(false); }
+  }
+
+  // ---- Fawry checkout view ----
+  if (checkout) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal" style={{ width: 'min(420px, 96vw)' }} onClick={(e) => e.stopPropagation()}>
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+            <h2 style={{ margin: 0 }}>{t('payWithFawry')}</h2>
+            <button className="ghost-btn" onClick={onClose}>✕</button>
+          </div>
+          <div className="fawry-box">
+            <div className="subtle">{t('fawryRef')}</div>
+            <div className="fawry-code">{checkout.reference}</div>
+            <div className="fawry-amount">{checkout.amountEGP} EGP</div>
+          </div>
+          <p className="subtle" style={{ fontSize: 13 }}>{t('fawryHow', { amount: checkout.amountEGP })}</p>
+          <button className="pill-btn" disabled={busy} onClick={confirmPaid} style={{ width: '100%' }}>{t('ivePaid')}</button>
+          <button className="link-btn" style={{ textAlign: 'center', marginTop: 8 }} onClick={() => setCheckout(null)}>{t('back')}</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Plan grid ----
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -47,7 +85,7 @@ export function Plans({ token, current, onClose, onChange }: {
               <button
                 className={tr.id === current ? 'ghost-pill' : 'pill-btn'}
                 style={{ marginTop: 'auto', width: '100%' }}
-                disabled={tr.id === current}
+                disabled={tr.id === current || busy}
                 onClick={() => choose(tr.id)}
               >
                 {tr.id === current ? t('currentPlan') : t('choose')}

@@ -14,7 +14,7 @@ async function main() {
 
   const restaurant = await prisma.restaurant.create({
     data: { name: 'Koshary El Tahrir', phone: '0223900000', businessType: 'Restaurant',
-      shopLat: 30.0450, shopLng: 31.2360 },
+      plan: 'Growth', shopLat: 30.0450, shopLng: 31.2360 },
   });
 
   await prisma.managerUser.create({
@@ -72,7 +72,7 @@ async function main() {
 
   // ---- A pharmacy tenant, to show the multi-vertical model. ----
   const pharmacy = await prisma.restaurant.create({
-    data: { name: 'Seif Pharmacy', phone: '0227000000', businessType: 'Pharmacy' },
+    data: { name: 'Seif Pharmacy', phone: '0227000000', businessType: 'Pharmacy', plan: 'Starter' },
   });
   await prisma.managerUser.create({
     data: {
