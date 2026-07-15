@@ -74,11 +74,13 @@ export default function App() {
     setReplayDriver(driverId);
   }
 
-  const refresh = () =>
-    token && api.state(token).then((s) => {
+  const refresh = () => {
+    if (!token) return;
+    return api.state(token).then((s) => {
       setBusiness(s.business); setDrivers(s.drivers); setOrders(s.orders);
       setRefreshKey((k) => k + 1);
     });
+  };
 
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [token]);
 
@@ -87,7 +89,7 @@ export default function App() {
     localStorage.setItem('meshwar_name', n);
     setToken(tok); setName(n);
   }
-  function logout() { localStorage.removeItem('meshwar_token'); localStorage.removeItem('meshwar_name'); setToken(null); }
+  function logout() { localStorage.removeItem('meshwar_token'); localStorage.removeItem('meshwar_name'); localStorage.removeItem('meshwar_refresh'); setToken(null); }
 
   const grandTotalPiastres = useMemo(() => {
     let sum = 0;

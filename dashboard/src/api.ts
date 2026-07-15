@@ -30,13 +30,46 @@ export interface Order {
   requiresPrescription: boolean;
 }
 
+// Prefer the freshest token in storage (updated by a silent refresh) over the
+// one the caller closed over, which may have gone stale mid-session.
+function currentToken(fallback?: string) {
+  return localStorage.getItem('meshwar_token') ?? fallback ?? '';
+}
+
+// Exchange the stored refresh token for a new access token. Returns true on success.
+async function tryRefresh(): Promise<boolean> {
+  const rt = localStorage.getItem('meshwar_refresh');
+  if (!rt) return false;
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: rt }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data.token) { localStorage.setItem('meshwar_token', data.token); return true; }
+  } catch { /* offline — fall through */ }
+  return false;
+}
+
 async function req(path: string, token: string, init?: RequestInit) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const doFetch = (t: string) => fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+    headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
   });
+  let res = await doFetch(currentToken(token));
+  // Access token expired? Refresh once and retry transparently.
+  if (res.status === 401 && (await tryRefresh())) {
+    res = await doFetch(currentToken(token));
+  }
   if (!res.ok) throw new Error(await res.text());
   return res.json();
+}
+
+// Persist a refresh token returned by login/register, passing the payload through.
+function storeRefresh<T extends { refreshToken?: string }>(data: T): T {
+  if (data?.refreshToken) localStorage.setItem('meshwar_refresh', data.refreshToken);
+  return data;
 }
 
 export const api = {
@@ -44,7 +77,7 @@ export const api = {
     fetch(`${API_BASE}/api/auth/manager/login`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
-    }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('login failed')))),
+    }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('login failed')))).then(storeRefresh),
 
   register: (body: {
     businessName: string; businessType: BusinessType; phone?: string;
@@ -53,7 +86,7 @@ export const api = {
     fetch(`${API_BASE}/api/auth/manager/register`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    }).then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json().catch(() => ({}))).error || 'signup failed')))),
+    }).then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json().catch(() => ({}))).error || 'signup failed')))).then(storeRefresh),
 
   updateBusiness: (token: string, patch: { ramadanMode?: boolean; iftarTime?: string | null; plan?: PlanTier }) =>
     req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),

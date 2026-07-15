@@ -14,11 +14,28 @@ import { publicRouter } from './routes/public';
 import { driverRouter } from './routes/driver';
 import { getRestaurantCashDrawers } from './services/cashDrawer';
 import { requireManager } from './services/auth';
+import { securityHeaders } from './security';
+
+// Fail fast in production if the JWT secret was never set — a default secret in
+// prod means anyone can mint valid tokens.
+const NODE_ENV = process.env.NODE_ENV ?? 'development';
+if (NODE_ENV === 'production') {
+  const s = process.env.JWT_SECRET;
+  if (!s || s.length < 16 || s === 'dev-only-change-me') {
+    throw new Error('JWT_SECRET must be set to a strong value (>=16 chars) in production');
+  }
+}
+
+// CORS allowlist. Default '*' is fine for local dev; set CORS_ORIGIN to your
+// dashboard's origin(s) (comma-separated) before going live.
+const corsOrigins = (process.env.CORS_ORIGIN ?? '*').split(',').map((o) => o.trim());
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.use(cors());
-app.use(express.json());
+app.set('trust proxy', 1); // Render terminates TLS at a proxy; trust it for req.ip
+app.use(securityHeaders);
+app.use(cors({ origin: corsOrigins.includes('*') ? true : corsOrigins }));
+app.use(express.json({ limit: '256kb' }));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api', authRouter);
@@ -40,4 +57,4 @@ const server = http.createServer(app);
 attachTrackingWs(server); // upgrades /ws/driver and /ws/dashboard
 
 const PORT = Number(process.env.PORT ?? 8080);
-server.listen(PORT, () => console.log(`El Kaptin backend on :${PORT}`));
+server.listen(PORT, () => console.log(`El Kaptin backend on :${PORT} (${NODE_ENV})`));
