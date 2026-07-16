@@ -1,0 +1,34 @@
+# One-command local/staging stack: Postgres + backend.
+#   docker compose up --build
+#   docker compose exec backend npx tsx src/db/seed.ts   # seed demo data
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: meshwar
+      POSTGRES_PASSWORD: meshwar
+      POSTGRES_DB: meshwar
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meshwar"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://meshwar:meshwar@db:5432/meshwar?schema=public"
+      JWT_SECRET: "change-me-in-prod"
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

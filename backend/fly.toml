@@ -1,0 +1,26 @@
+# El Kaptin backend on Fly.io. Run `fly launch` to set app name + region, then
+# attach Postgres (`fly postgres create` + `fly postgres attach`).
+app = "meshwar-backend"
+primary_region = "cdg"  # Paris — low latency to Egypt; try "fra" too
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1   # keep 1 warm so WebSockets/tracking stay connected
+
+  [[http_service.checks]]
+    path = "/health"
+    interval = "15s"
+    timeout = "3s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

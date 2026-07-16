@@ -1,0 +1,56 @@
+name: meshwar_driver
+description: El Kaptin driver app — background location tracking for private fleets.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Arabic (RTL) + English localization delegates.
+  flutter_localizations:
+    sdk: flutter
+  # Battery/background-proof tracking (foreground service on Android).
+  flutter_background_service: ^5.0.5
+  flutter_background_service_android: ^6.2.2
+  # GPS with distanceFilter so we don't spam fixes when stopped.
+  geolocator: ^12.0.0
+  # Persistent WebSocket to the backend.
+  web_socket_channel: ^3.0.1
+  # Local offline queue for location fixes when the network drops.
+  hive_flutter: ^1.1.0
+  # Store the driver JWT securely.
+  flutter_secure_storage: ^9.2.2
+  # Guide drivers through OEM battery/autostart allow-lists.
+  permission_handler: ^11.3.1
+  # Deep-link into the driver's own Google Maps for turn-by-turn (no Maps API cost).
+  url_launcher: ^6.3.1
+  # REST calls for the order lifecycle.
+  http: ^1.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Generates Android + iOS launcher icons from assets/icon.png.
+  flutter_launcher_icons: ^0.14.1
+
+# Run once to generate the icons:  dart run flutter_launcher_icons
+# Android-only: the pilot ships an Android APK, and we scaffold only the android
+# platform on build. Re-add `ios:`/`web:` here when those platforms are set up
+# (an iOS build also needs a Mac + Apple Developer account).
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon.png"
+  # Android adaptive icon: solid brand background + padded foreground.
+  adaptive_icon_background: "#7C5CFF"
+  adaptive_icon_foreground: "assets/icon-foreground.png"
+  min_sdk_android: 21
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon.png
+    - assets/icon-foreground.png

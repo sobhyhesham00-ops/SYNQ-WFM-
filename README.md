@@ -1,20 +1,157 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# El Kaptin · الكابتن — Driver Tracking SaaS
 
-# Run and deploy your AI Studio app
+> *"Every order gets a **captain**."* — hardware-free, phone-GPS live tracking
+> + Cash-on-Delivery (COD) reconciliation for independent restaurants and
+> takeaway chains running their own private delivery fleets in Egypt.
 
-This contains everything you need to run your app locally.
+**Two apps, one system:** a battery-proof Flutter **driver app**, and a React
+**manager/cashier dashboard** — talking to one lean Node + PostgreSQL backend.
 
-View your app in AI Studio: https://ai.studio/apps/63e18408-2c82-47ba-90e2-49b9766171ec
+**Built for Egypt's small merchants.** Multi-vertical by design — restaurants,
+takeaways, pharmacies (with prescription flags), groceries, mini-markets, the
+street **koshk (كشك)**, and a catch-all store. Fully **bilingual: Egyptian
+Arabic (colloquial, RTL) + English**, with a one-tap language toggle across the
+dashboard, driver app, and customer tracking page. Landmark-based addressing,
+one-tap **Call**/WhatsApp, and COD reconciliation reflect how deliveries
+actually work here — see [`docs/EGYPT-MARKET.md`](docs/EGYPT-MARKET.md).
 
-## Run Locally
+| Dashboard — Egyptian Arabic (RTL) | Pharmacy vertical (℞ + prescription) | Customer tracking (Arabic) |
+|---|---|---|
+| ![AR dashboard](docs/screenshots/i18n-restaurant-ar.png) | ![Pharmacy](docs/screenshots/i18n-pharmacy-ar.png) | ![Customer](docs/screenshots/i18n-customer-ar.png) |
 
-**Prerequisites:**  Node.js
+| Merchant signup — business-type picker | Ramadan iftar-rush banner (live countdown) |
+|---|---|
+| ![Signup](docs/screenshots/signup.png) | ![Ramadan](docs/screenshots/ramadan.png) |
 
+**Self-service signup:** merchants create their own business, pick a vertical,
+and are logged straight in. **Ramadan mode:** a 🌙 toggle shows a live countdown
+to iftar and turns into a red "rush" alert within 2 hours of maghrib — Egypt's
+delivery peak — so managers get drivers ready. The **driver app** logs in
+against the real API (phone + PIN → JWT in secure storage) and loads its live
+orders, earnings, and delivery flow from the backend.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+| Onboarding checklist (fresh signup) | Today's analytics strip |
+|---|---|
+| ![Onboarding](docs/screenshots/onboarding.png) | ![Analytics](docs/screenshots/analytics.png) |
+
+**Onboarding:** a fresh business sees a "Get started" checklist (add first
+driver → create first order) instead of an empty page. **Analytics:** a live
+"today" strip — orders, delivered, avg delivery time, cash collected.
+**Smart assignment:** the assign dropdown ranks idle drivers by distance from
+the shop (Haversine over live GPS) and flags the 🎯 nearest one.
+
+| Delivery handover code (customer) | Post-delivery rating (customer) |
+|---|---|
+| ![Delivery code](docs/screenshots/proof-code.png) | ![Rating](docs/screenshots/proof-rating.png) |
+
+**Proof of delivery:** every assignment mints a 4-digit code shown on the
+customer's tracking page; the driver must enter it to mark *Delivered* — cutting
+COD "I never got it" disputes. **Ratings:** the customer rates the driver after
+delivery; the average shows on each driver's cash-drawer card. **Cash report:**
+one-click CSV export of the week's deliveries for the owner's books. **Push:**
+FCM plumbing (device-token endpoint + notify service) pings the driver on a new
+assignment — set `FCM_SERVER_KEY` to go live; it no-ops safely without one.
+
+## Screenshots
+
+The dashboard running against the real backend (Postgres + WebSocket). Street
+tiles need outbound network; the live driver pins, cash drawer, and route
+replay are driven by seeded backend data.
+
+| Live fleet + cash drawer | Route replay (from `location_logs`) |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Route replay](docs/screenshots/route-replay.png) |
+
+Customer-facing live tracking link (`/t/:token`, no login — shareable by SMS):
+
+![Customer tracking](docs/screenshots/customer-tracking.png)
+
+## Repo layout
+
+```
+.
+├── docs/
+│   └── ARCHITECTURE.md          System architecture + WS-vs-Firebase decision
+├── backend/                     Node + WebSocket + PostgreSQL (the whole backend)
+│   ├── prisma/schema.prisma     PostgreSQL schema (Prisma)
+│   ├── sql/schema.sql           Same schema as raw SQL
+│   └── src/
+│       ├── server.ts            One process = REST API + WS tracking
+│       ├── ws/tracking.ts       Batched location ingest + dashboard fan-out
+│       ├── routes/              Auth + order lifecycle (transactional)
+│       ├── services/cashDrawer.ts   COD reconciliation (the money logic)
+│       └── db/seed.ts           Demo restaurant + drivers + orders
+├── dashboard/                   React + Vite + MapLibre manager dashboard
+│   └── src/                     Live map, order assign, cash-drawer settle
+├── mobile/flutter/              Driver app w/ background foreground service
+│   └── lib/
+│       ├── screens/             Login + home (shift toggle, cash hero)
+│       ├── services/location_service.dart   The battery-proof tracking core
+│       └── theme.dart           Shared El Kaptin visual identity
+├── firestore/                   Alternative if you skip the SQL backend
+└── docker-compose.yml           One-command Postgres + backend
+```
+
+## The four answers, in one line each
+
+1. **Real-time strategy** — one Node process holds a WebSocket per driver
+   (batched frames every 20s) and fans the latest point out to dashboard rooms.
+   Chosen over Firestore because per-operation billing is wrong for
+   high-frequency location writes, and SQL transactions are right for cash. See
+   `docs/ARCHITECTURE.md`.
+2. **Schema** — `restaurants · drivers · orders · location_logs` with money in
+   integer piastres and denormalized `current_lat/lng` hot columns. See
+   `backend/prisma/schema.prisma` / `backend/sql/schema.sql`.
+3. **Background tracking** — Android **foreground service** with a visible
+   notification (`flutter_background_service`) so budget OEM phones can't freeze
+   it; batched, movement-filtered GPS with an offline queue. See
+   `mobile/flutter/lib/services/location_service.dart` and the manifest snippet.
+4. **Cash drawer** — aggregate each driver's `Delivered && !settled` orders;
+   settle atomically under a row lock. See
+   `backend/src/services/cashDrawer.ts`.
+
+## Local quick start
+
+**Option A — one command (Docker):**
+```bash
+docker compose up --build          # Postgres + backend on :8080
+docker compose exec backend npx tsx src/db/seed.ts   # demo data
+```
+
+**Option B — manual backend:**
+```bash
+cd backend
+npm install
+# set DATABASE_URL + JWT_SECRET in .env
+npx prisma migrate dev --name init
+npm run seed          # demo restaurant + drivers + orders
+npm run dev           # REST + WS on :8080
+```
+
+**Dashboard:**
+```bash
+cd dashboard
+npm install
+npm run dev           # http://localhost:5173
+```
+
+**Demo login:** `manager@demo.eg` / `password123`
+(drivers: `01000000001` / `1234`, `01000000002` / `1234`)
+
+### UI / design
+The dashboard and driver app share one fintech-inspired visual language
+(soft lilac gradients, rounded cards, a bold gradient balance hero, pill
+buttons, status chips). The fleet's **total COD cash to collect** is the hero
+"balance" card; each driver is a holdings-style row with a *Received cash*
+settle button. See `dashboard/src/index.css` and `mobile/flutter/lib/theme.dart`.
+
+## Recommended lean hosting (flat ~$5–15/mo)
+
+- **Backend + Postgres:** Fly.io, Railway, Render, or a Hetzner CX small VM.
+- **Dashboard:** any static host (Vercel/Netlify/Cloudflare Pages).
+- **Maps:** the dashboard can use free-tier MapLibre + OpenStreetMap tiles to
+  avoid Google Maps billing; drivers use their own installed Google Maps for
+  turn-by-turn (deep link, no API cost to you).
+
+> This is an architectural blueprint with production-grade patterns and runnable
+> templates — wire in real auth, migrations, and error handling before shipping.

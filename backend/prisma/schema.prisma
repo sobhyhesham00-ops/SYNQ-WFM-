@@ -1,0 +1,181 @@
+// El Kaptin — PostgreSQL schema (Prisma)
+// Run: npx prisma migrate dev --name init
+//
+// Design notes:
+//  - `Driver.currentLat/Lng` are denormalized "hot" columns updated on every
+//    location frame so the dashboard reads one row, not a scan of location_logs.
+//  - `LocationLog` is the append-only history table; it is the only unbounded
+//    table and is indexed for time-range route replay.
+//  - Money is stored in integer *piastres* (1 EGP = 100 piastres) to avoid
+//    floating-point rounding on cash reconciliation. Never use FLOAT for money.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Subscription tier (billing is out-of-band via Fawry/wallet; this just records
+// what the merchant is on and drives plan-based limits/badges).
+enum PlanTier {
+  Free
+  Starter
+  Growth
+  Chain
+}
+
+// The kind of merchant using El Kaptin. Drives the UI's vocabulary per vertical.
+// Covers Egypt's small-merchant long tail: eateries, pharmacies, groceries
+// (بقالة), mini-markets, the ubiquitous street kiosk (كشك), and a catch-all.
+enum BusinessType {
+  Restaurant
+  Takeaway
+  Pharmacy
+  Grocery
+  Minimarket
+  Kiosk
+  Other
+}
+
+// A tenant merchant (restaurant / takeaway / pharmacy). Every driver, order and
+// dashboard session belongs to one. (Model kept named `Restaurant` for FK
+// stability; `businessType` is the real vertical — surfaced as "business".)
+model Restaurant {
+  id           String       @id @default(uuid())
+  name         String
+  phone        String?
+  businessType BusinessType @default(Restaurant)
+  plan         PlanTier     @default(Free)
+  // Ramadan ops: when on, the dashboard shows an iftar-rush countdown so the
+  // manager gets drivers ready before the maghrib (sunset) surge.
+  ramadanMode  Boolean      @default(false)
+  iftarTime    String?      // "HH:mm" local, e.g. "18:05"
+  // Shop location — pickup point used to suggest the nearest idle driver.
+  shopLat      Float?
+  shopLng      Float?
+  createdAt    DateTime     @default(now())
+
+  drivers  Driver[]
+  orders   Order[]
+  users    ManagerUser[]
+  payments Payment[]
+}
+
+// Subscription payment receipt. A statement of what was paid — El Kaptin issues
+// the reference and records the confirmation; it never holds the money.
+model Payment {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  plan         PlanTier
+  method       String     // fawry | vodafone | instapay
+  cycle        String     // monthly | annual
+  amount       Int        // piastres
+  reference    String
+  createdAt    DateTime   @default(now())
+
+  @@index([restaurantId, createdAt])
+}
+
+// Restaurant staff who log into the web dashboard (manager / cashier).
+model ManagerUser {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String     @default("manager") // manager | cashier
+  createdAt    DateTime   @default(now())
+
+  @@index([restaurantId])
+}
+
+enum DriverStatus {
+  Idle
+  Delivering
+  Offline
+}
+
+model Driver {
+  id           String       @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id])
+  name         String
+  phone        String
+  passwordHash String       // drivers log in with phone + PIN/password
+  status       DriverStatus @default(Offline)
+
+  // Hot columns: latest known position, updated on every location frame.
+  currentLat      Float?
+  currentLng      Float?
+  lastSeenAt      DateTime?
+  fcmToken        String?   // push token for new-assignment notifications
+
+  createdAt DateTime @default(now())
+
+  orders       Order[]
+  locationLogs LocationLog[]
+
+  @@index([restaurantId, status])
+}
+
+enum OrderStatus {
+  Pending    // created, not yet assigned
+  Assigned   // given to a driver
+  PickedUp   // driver has food, en route
+  Delivered  // completed, cash collected
+  Cancelled
+}
+
+model Order {
+  id               String      @id @default(uuid())
+  restaurantId     String
+  restaurant       Restaurant  @relation(fields: [restaurantId], references: [id])
+  driverId         String?
+  driver           Driver?     @relation(fields: [driverId], references: [id])
+
+  customerAddress  String
+  customerPhone    String?
+  // Egypt is landmark-addressed ("over the pharmacy, next to the mosque").
+  landmark         String?
+  notes            String?
+  // Pharmacy: does this delivery require a prescription (روشتة)?
+  requiresPrescription Boolean @default(false)
+  // Amount the driver must collect from the customer, in piastres.
+  totalCashToCollect Int
+  status           OrderStatus @default(Pending)
+
+  // Opaque token for the public customer tracking link (/t/:token). No auth.
+  publicToken      String   @unique @default(uuid())
+  // 4-digit code the customer gives the driver to confirm handover (anti-dispute).
+  deliveryOtp      String?
+  // Customer's post-delivery rating of the driver (1–5) + when.
+  rating           Int?
+  ratedAt          DateTime?
+
+  createdAt   DateTime  @default(now())
+  assignedAt  DateTime?
+  deliveredAt DateTime?
+  // Set true when the driver has physically handed this cash to the cashier.
+  settled     Boolean   @default(false)
+  settledAt   DateTime?
+
+  @@index([restaurantId, status])
+  @@index([driverId, status, settled])
+}
+
+model LocationLog {
+  id        BigInt   @id @default(autoincrement())
+  driverId  String
+  driver    Driver   @relation(fields: [driverId], references: [id])
+  lat       Float
+  lng       Float
+  // Device timestamp (when the fix was taken), not server receive time.
+  timestamp DateTime
+
+  @@index([driverId, timestamp])
+}
