@@ -2,6 +2,10 @@
 
 Three ways to ship, cheapest → most control.
 
+> **No cloud account?** Run it in a **GitHub Codespace** (uses the GitHub
+> account you already have, free, no card) — see
+> [`docs/DEPLOY-CODESPACES.md`](docs/DEPLOY-CODESPACES.md).
+>
 > **On Railway?** See [`docs/DEPLOY-RAILWAY.md`](docs/DEPLOY-RAILWAY.md) — the
 > repo ships `backend/railway.json` + `dashboard/railway.json` for it.
 
