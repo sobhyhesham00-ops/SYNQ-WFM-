@@ -10,6 +10,7 @@
 name: Build driver APK
 
 on:
+  # Manual builds: pick your backend URL and download the APK artifact.
   workflow_dispatch:
     inputs:
       api_base:
@@ -20,6 +21,13 @@ on:
         description: "WebSocket base URL, e.g. wss://elkaptin-backend.onrender.com"
         required: true
         default: "wss://api.meshwar.app"
+  # Also rebuild automatically whenever the driver app changes, so there's always
+  # a fresh, known-good APK to grab. Uses the default URLs (override via a manual
+  # run, or set repo Variables API_BASE / WS_BASE).
+  push:
+    paths:
+      - "mobile/flutter/**"
+      - ".github/workflows/build-apk.yml"
 
 jobs:
   build:
@@ -46,10 +54,13 @@ jobs:
         run: bash tool/prepare_android.sh
 
       - name: Build release APK
+        env:
+          API_BASE: ${{ inputs.api_base || vars.API_BASE || 'https://api.meshwar.app' }}
+          WS_BASE: ${{ inputs.ws_base || vars.WS_BASE || 'wss://api.meshwar.app' }}
         run: |
           flutter build apk --release \
-            --dart-define=API_BASE=${{ inputs.api_base }} \
-            --dart-define=WS_BASE=${{ inputs.ws_base }}
+            --dart-define=API_BASE="$API_BASE" \
+            --dart-define=WS_BASE="$WS_BASE"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
