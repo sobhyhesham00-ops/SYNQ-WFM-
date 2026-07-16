@@ -60,12 +60,10 @@ export function attachTrackingWs(server: Server) {
   });
 }
 
-async function handleDriver(ws: WebSocket, driverId: string, restaurantId: string) {
-  await prisma.driver.update({
-    where: { id: driverId },
-    data: { status: 'Idle', lastSeenAt: new Date() },
-  });
-
+function handleDriver(ws: WebSocket, driverId: string, restaurantId: string) {
+  // Attach listeners FIRST (synchronously), before any await — otherwise a frame
+  // that arrives during the connect-time DB write is emitted with no listener and
+  // silently dropped by `ws`.
   ws.on('message', async (raw) => {
     let frame: DriverFrame;
     try {
@@ -115,6 +113,12 @@ async function handleDriver(ws: WebSocket, driverId: string, restaurantId: strin
     });
     broadcast(restaurantId, { type: 'driver_offline', driverId });
   });
+
+  // Now (after listeners are wired) mark the driver online. Fire-and-forget so a
+  // slow DB write can't delay message handling or drop an early frame.
+  prisma.driver
+    .update({ where: { id: driverId }, data: { status: 'Idle', lastSeenAt: new Date() } })
+    .catch((e) => console.error('[ws] driver connect update failed:', e));
 }
 
 function handleDashboard(ws: WebSocket, restaurantId: string) {
