@@ -42,11 +42,26 @@ class _HomeScreenState extends State<HomeScreen> {
       .where((o) => o.status == 'Delivered')
       .fold(0.0, (s, o) => s + (double.tryParse(o.cashEGP) ?? 0));
 
-  Future<void> _ensurePermissions() async {
-    await Permission.locationWhenInUse.request();
+  /// Returns true only if we have at least foreground location — without it the
+  /// shift would "start" but report nothing, the worst silent failure.
+  Future<bool> _ensurePermissions() async {
+    final status = await Permission.locationWhenInUse.request();
+    if (!status.isGranted) return false;
+    // Background ("Allow all the time") keeps tracking alive with the screen
+    // locked; on Android 11+ this hands off to a settings page.
     await Permission.locationAlways.request();
+    // Best-effort extras — not blockers for going on shift.
     await Permission.notification.request();
     await Permission.ignoreBatteryOptimizations.request();
+    return true;
+  }
+
+  void _warnLocationNeeded() {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(tr('locationNeeded')),
+      duration: const Duration(seconds: 6),
+      action: SnackBarAction(label: tr('openSettings'), onPressed: openAppSettings),
+    ));
   }
 
   @override
@@ -117,9 +132,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: _onShift ? MeshwarColors.danger : null,
                 ),
                 onPressed: () async {
-                  if (!_onShift) { await _ensurePermissions(); await startShift(); }
-                  else { endShift(); }
-                  setState(() => _onShift = !_onShift);
+                  if (!_onShift) {
+                    final ok = await _ensurePermissions();
+                    if (!mounted) return;
+                    if (!ok) { _warnLocationNeeded(); return; } // don't start a blind shift
+                    await startShift();
+                  } else {
+                    endShift();
+                  }
+                  if (mounted) setState(() => _onShift = !_onShift);
                 },
                 child: Text(_onShift ? tr('endShift') : tr('startShift')),
               ),
