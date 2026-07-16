@@ -2,10 +2,12 @@
  * Backend entrypoint: one Node process = REST API + WebSocket tracking.
  * This single container (plus Postgres) is the whole MVP backend.
  */
+import 'express-async-errors'; // makes async route throws reach the error handler (Express 4)
 import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { attachTrackingWs } from './ws/tracking';
 import { orderRouter } from './routes/orders';
@@ -53,8 +55,28 @@ const publicDir = path.join(__dirname, '..', 'public');
 app.use(express.static(publicDir));
 app.get('/t/:token', (_req, res) => res.sendFile(path.join(publicDir, 'track.html')));
 
+// Global error handler — must be last, and must keep all four args so Express
+// recognises it. On a flaky free-tier DB a Prisma throw lands here as a clean
+// 500 instead of hanging the request forever. Never leak stack traces to clients.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const msg = err instanceof Error ? err.message : String(err);
+  console.error('[error]', msg);
+  if (res.headersSent) return;
+  res.status(500).json({ error: 'internal error' });
+});
+
 const server = http.createServer(app);
 attachTrackingWs(server); // upgrades /ws/driver and /ws/dashboard
+
+// Last-resort guards: a stray rejection (a failed FCM push, a dropped WS send)
+// must not silently kill the process and disconnect every live driver.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason instanceof Error ? reason.message : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err.message);
+});
 
 const PORT = Number(process.env.PORT ?? 8080);
 server.listen(PORT, () => console.log(`El Kaptin backend on :${PORT} (${NODE_ENV})`));

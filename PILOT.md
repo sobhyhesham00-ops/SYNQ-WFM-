@@ -16,6 +16,7 @@ what's still a stub.
 | Ratings, route replay, analytics, leaderboard | ✅ Real | Backed by real Postgres |
 | Subscription plans + feature gating | ✅ Real | Backend-enforced (402 when over-tier) |
 | Auth (access + refresh tokens, rate limit) | ✅ Real | Managers 2h access + 30d refresh; drivers 12h |
+| Runtime error handling | ✅ Real | Global handler + async forwarding: a DB blip returns a clean 500, never a hung request; process survives stray rejections |
 | **Wallet checkout (Fawry / Vodafone / InstaPay)** | ⚠️ **Stub** | We issue a reference and record a receipt — **no real charge is captured.** Confirm payment out-of-band before upgrading a merchant. |
 | Push notifications (FCM) | ⚠️ Stub | Falls back to console log if `FCM_SERVER_KEY` unset |
 | WS token refresh | ⚠️ Gap | The tracking socket uses the access token; long shifts covered by the 12h driver TTL, but there's no mid-socket refresh |
