@@ -35,7 +35,7 @@ SERVICE = """
             android:name="id.flutter.flutter_background_service.BackgroundService"
             android:foregroundServiceType="location"
             android:exported="false"
-            tools:replace="android:foregroundServiceType" />
+            tools:replace="android:foregroundServiceType,android:exported" />
 """
 
 
