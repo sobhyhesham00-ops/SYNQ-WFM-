@@ -1,0 +1,59 @@
+# Builds the El Kaptin driver APK in the cloud — no local Flutter needed.
+#
+# Run it: GitHub → Actions → "Build driver APK" → Run workflow, and type your
+# backend URL (https://…). When it finishes, open the run and download the
+# "el-kaptin-driver-apk" artifact — that .apk installs straight onto an Android
+# phone (Settings → allow "install unknown apps", then tap the file).
+#
+# The release APK is debug-signed (Flutter's default), which is fine to
+# sideload for a pilot. Wire a real keystore before a Play Store upload.
+name: Build driver APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base:
+        description: "Backend base URL, e.g. https://elkaptin-backend.onrender.com"
+        required: true
+        default: "https://api.meshwar.app"
+      ws_base:
+        description: "WebSocket base URL, e.g. wss://elkaptin-backend.onrender.com"
+        required: true
+        default: "wss://api.meshwar.app"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/flutter
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Prepare Android project (scaffold + permissions + icons)
+        run: bash tool/prepare_android.sh
+
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE=${{ inputs.api_base }} \
+            --dart-define=WS_BASE=${{ inputs.ws_base }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-kaptin-driver-apk
+          path: mobile/flutter/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
