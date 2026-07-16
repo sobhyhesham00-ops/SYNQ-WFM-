@@ -114,11 +114,14 @@ export async function settleDriverCash(
   return prisma.$transaction(
     async (tx) => {
       // Lock the driver's open delivered orders for the duration of the txn.
-      const rows = await tx.$queryRaw<{ id: string; total_cash_to_collect: number }[]>(
+      // Prisma maps model Order -> table "Order" with camelCase columns (no
+      // @@map), so identifiers must be quoted exactly. FOR UPDATE locks these
+      // rows so two concurrent cashier taps can't settle the same cash twice.
+      const rows = await tx.$queryRaw<{ id: string; totalCashToCollect: number }[]>(
         Prisma.sql`
-          SELECT id, total_cash_to_collect
-          FROM orders
-          WHERE driver_id = ${driverId}::uuid
+          SELECT id, "totalCashToCollect"
+          FROM "Order"
+          WHERE "driverId" = ${driverId}
             AND status = 'Delivered'
             AND settled = false
           FOR UPDATE
@@ -130,7 +133,7 @@ export async function settleDriverCash(
       }
 
       const settledPiastres = rows.reduce(
-        (s, r) => s + r.total_cash_to_collect,
+        (s, r) => s + r.totalCashToCollect,
         0,
       );
       const ids = rows.map((r) => r.id);
