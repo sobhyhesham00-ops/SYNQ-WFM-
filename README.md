@@ -123,7 +123,7 @@ docker compose exec backend npx tsx src/db/seed.ts   # demo data
 cd backend
 npm install
 # set DATABASE_URL + JWT_SECRET in .env
-npx prisma migrate dev --name init
+npx prisma db push    # create the tables (no migrations yet — see below)
 npm run seed          # demo restaurant + drivers + orders
 npm run dev           # REST + WS on :8080
 ```
@@ -145,13 +145,27 @@ buttons, status chips). The fleet's **total COD cash to collect** is the hero
 "balance" card; each driver is a holdings-style row with a *Received cash*
 settle button. See `dashboard/src/index.css` and `mobile/flutter/lib/theme.dart`.
 
-## Recommended lean hosting (flat ~$5–15/mo)
+## Run it live
 
-- **Backend + Postgres:** Fly.io, Railway, Render, or a Hetzner CX small VM.
-- **Dashboard:** any static host (Vercel/Netlify/Cloudflare Pages).
-- **Maps:** the dashboard can use free-tier MapLibre + OpenStreetMap tiles to
-  avoid Google Maps billing; drivers use their own installed Google Maps for
-  turn-by-turn (deep link, no API cost to you).
+- **No cloud account / no card:** open a **GitHub Codespace** and run
+  `bash scripts/codespace-up.sh` — it starts everything and prints a public URL
+  your phone can reach. See [`docs/DEPLOY-CODESPACES.md`](docs/DEPLOY-CODESPACES.md).
+- **Always-on pilot:** Railway ([`docs/DEPLOY-RAILWAY.md`](docs/DEPLOY-RAILWAY.md),
+  ships `railway.json`), Render (`render.yaml`), Fly.io, or a small VM. See
+  [`DEPLOY.md`](DEPLOY.md).
+- **Driver APK:** GitHub → Actions → **"Build driver APK"** → Run workflow with
+  your backend URL → download the installable artifact. See
+  [`mobile/flutter/README.md`](mobile/flutter/README.md).
+- **Pilot checklist:** honest "real vs. stub", per-phone battery setup, rollback
+  — [`PILOT.md`](PILOT.md).
+- **Maps:** free-tier MapLibre + OpenStreetMap tiles (no Google Maps billing);
+  drivers deep-link into their own Google Maps for turn-by-turn.
 
-> This is an architectural blueprint with production-grade patterns and runnable
-> templates — wire in real auth, migrations, and error handling before shipping.
+## State of the code
+
+Runnable and verified end-to-end (against real Postgres + WebSockets): live
+tracking, the order + COD cash lifecycle, OTP proof-of-delivery, auth with
+refresh tokens + rate limiting, and resilient error handling are all in place
+and exercised. Still stubbed for a real pilot: **payment capture** (the wallet
+checkout only records a reference), **Prisma migrations** (we use `db push`),
+and **DB backups** — see [`PILOT.md`](PILOT.md).
