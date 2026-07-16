@@ -37,18 +37,17 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.1
 
 # Run once to generate the icons:  dart run flutter_launcher_icons
+# Android-only: the pilot ships an Android APK, and we scaffold only the android
+# platform on build. Re-add `ios:`/`web:` here when those platforms are set up
+# (an iOS build also needs a Mac + Apple Developer account).
 flutter_launcher_icons:
   android: true
-  ios: true
-  remove_alpha_ios: true
+  ios: false
   image_path: "assets/icon.png"
   # Android adaptive icon: solid brand background + padded foreground.
   adaptive_icon_background: "#7C5CFF"
   adaptive_icon_foreground: "assets/icon-foreground.png"
   min_sdk_android: 21
-  web:
-    generate: true
-    image_path: "assets/icon.png"
 
 flutter:
   uses-material-design: true
