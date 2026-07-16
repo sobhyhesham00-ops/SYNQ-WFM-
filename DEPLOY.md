@@ -2,6 +2,9 @@
 
 Three ways to ship, cheapest → most control.
 
+> **On Railway?** See [`docs/DEPLOY-RAILWAY.md`](docs/DEPLOY-RAILWAY.md) — the
+> repo ships `backend/railway.json` + `dashboard/railway.json` for it.
+
 ## Option 1 — Render Blueprint (one click)
 
 The whole stack (Postgres + backend + dashboard) is described in
