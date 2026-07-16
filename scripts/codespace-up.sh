@@ -53,9 +53,15 @@ cat <<BANNER
 
 BANNER
 
-# 4) run backend + dashboard together (Ctrl-C stops both)
+# 4) build the dashboard against this Codespace's backend URL, then run backend
+#    (background) + serve the built dashboard (foreground). Building + `serve`
+#    is more robust over Codespaces' forwarded ports than the Vite dev server.
+echo "==> building dashboard…"
+( cd dashboard && VITE_API_BASE="$API" VITE_WS_BASE="$WS" npm run build )
+
 ( cd backend && DATABASE_URL="$DATABASE_URL" JWT_SECRET="$JWT_SECRET" PORT=8080 npx tsx src/server.ts ) &
 BACKEND_PID=$!
 trap 'kill "$BACKEND_PID" 2>/dev/null || true' EXIT INT TERM
 
-( cd dashboard && VITE_API_BASE="$API" VITE_WS_BASE="$WS" npx vite --host 0.0.0.0 --port 5173 )
+echo "==> serving dashboard on :5173 (Ctrl-C stops everything)"
+( cd dashboard && PORT=5173 npm run start )
