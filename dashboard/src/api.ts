@@ -6,7 +6,7 @@ export interface Driver {
   id: string; name: string; phone: string;
   status: 'Idle' | 'Delivering' | 'Offline';
   currentLat: number | null; currentLng: number | null; lastSeenAt: string | null;
-  rating?: number | null; ratingCount?: number;
+  rating?: number | null; ratingCount?: number; active?: boolean;
 }
 export type BusinessType = 'Restaurant' | 'Takeaway' | 'Pharmacy' | 'Grocery' | 'Minimarket' | 'Kiosk' | 'Other';
 export const BUSINESS_TYPES: BusinessType[] =
@@ -104,6 +104,12 @@ export const api = {
 
   addDriver: (token: string, d: { name: string; phone: string; password: string }): Promise<Driver> =>
     req('/api/drivers', token, { method: 'POST', body: JSON.stringify(d) }),
+
+  setDriverActive: (token: string, driverId: string, active: boolean) =>
+    req(`/api/drivers/${driverId}`, token, { method: 'PATCH', body: JSON.stringify({ active }) }),
+
+  resetDriverPin: (token: string, driverId: string, password: string) =>
+    req(`/api/drivers/${driverId}/reset-pin`, token, { method: 'POST', body: JSON.stringify({ password }) }),
 
   analytics: (token: string): Promise<Analytics> => req('/api/analytics', token),
 
