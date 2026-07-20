@@ -121,6 +121,53 @@ orderRouter.get('/reports/cash.csv', requireManager, async (req, res) => {
   res.send(rows.join('\n'));
 });
 
+// Per-driver performance report (last N days) as CSV — for the owner's review.
+orderRouter.get('/reports/drivers.csv', requireManager, async (req, res) => {
+  const rid = req.auth!.restaurantId;
+  if (!(await gate(res, rid, 'csv'))) return;
+  const days = Math.min(Number(req.query.days) || 30, 365);
+  const since = new Date(Date.now() - days * 86400_000);
+
+  const [drivers, orders] = await Promise.all([
+    prisma.driver.findMany({
+      where: { restaurantId: rid },
+      select: { id: true, name: true, phone: true, active: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.order.findMany({
+      where: { restaurantId: rid, createdAt: { gte: since }, driverId: { not: null } },
+      select: { driverId: true, status: true, totalCashToCollect: true, rating: true, assignedAt: true, deliveredAt: true },
+    }),
+  ]);
+
+  const esc = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
+  const rows = [
+    ['driver', 'phone', 'active', 'deliveries', 'failed', 'collected_egp', 'avg_minutes', 'avg_rating'].join(','),
+  ];
+  for (const d of drivers) {
+    const mine = orders.filter((o) => o.driverId === d.id);
+    const delivered = mine.filter((o) => o.status === 'Delivered');
+    const failed = mine.filter((o) => o.status === 'Failed');
+    const collected = delivered.reduce((s, o) => s + o.totalCashToCollect, 0);
+    const times = delivered
+      .filter((o) => o.assignedAt && o.deliveredAt)
+      .map((o) => (+o.deliveredAt! - +o.assignedAt!) / 60_000);
+    const avgMin = times.length ? times.reduce((a, b) => a + b, 0) / times.length : null;
+    const ratings = delivered.filter((o) => o.rating != null).map((o) => o.rating as number);
+    const avgRating = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
+    rows.push([
+      esc(d.name), esc(d.phone), d.active ? 'yes' : 'no',
+      String(delivered.length), String(failed.length),
+      (collected / 100).toFixed(2),
+      avgMin != null ? avgMin.toFixed(1) : '',
+      avgRating != null ? avgRating.toFixed(2) : '',
+    ].join(','));
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="elkaptin-drivers-${days}d.csv"`);
+  res.send(rows.join('\n'));
+});
+
 // Owner daily-summary — a light end-of-day recap (available on every plan).
 orderRouter.get('/summary/today', requireManager, async (req, res) => {
   const rid = req.auth!.restaurantId;
@@ -375,6 +422,14 @@ orderRouter.get('/orders/history', requireManager, async (req, res) => {
   const STATUSES = ['Pending', 'Assigned', 'PickedUp', 'Delivered', 'Failed', 'Cancelled'];
   if (status && STATUSES.includes(status)) where.status = status as (typeof STATUSES)[number] as never;
   if (driverId) where.driverId = driverId;
+  const q = (req.query.q as string | undefined)?.trim();
+  if (q) {
+    where.OR = [
+      { customerAddress: { contains: q, mode: 'insensitive' } },
+      { landmark: { contains: q, mode: 'insensitive' } },
+      { customerPhone: { contains: q } },
+    ];
+  }
   if (from || to) {
     const range: Prisma.DateTimeFilter = {};
     if (from) { const d = new Date(from); if (!Number.isNaN(+d)) range.gte = d; }
@@ -387,6 +442,31 @@ orderRouter.get('/orders/history', requireManager, async (req, res) => {
     prisma.order.count({ where }),
   ]);
   res.json({ orders, total, limit, offset });
+});
+
+// Orders that need the manager's attention: failed deliveries (reassign/cancel),
+// orders sitting unassigned too long, and assigned orders not picked up.
+orderRouter.get('/orders/attention', requireManager, async (req, res) => {
+  const rid = req.auth!.restaurantId;
+  const stalePendingMin = 15;
+  const staleAssignedMin = 30;
+  const now = Date.now();
+  const [failed, stalePending, staleAssigned] = await Promise.all([
+    prisma.order.findMany({ where: { restaurantId: rid, status: 'Failed' }, orderBy: { createdAt: 'desc' } }),
+    prisma.order.findMany({
+      where: { restaurantId: rid, status: 'Pending', createdAt: { lte: new Date(now - stalePendingMin * 60_000) } },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.order.findMany({
+      where: { restaurantId: rid, status: 'Assigned', assignedAt: { lte: new Date(now - staleAssignedMin * 60_000) } },
+      orderBy: { assignedAt: 'asc' },
+    }),
+  ]);
+  res.json({
+    failed, stalePending, staleAssigned,
+    count: failed.length + stalePending.length + staleAssigned.length,
+    thresholds: { stalePendingMin, staleAssignedMin },
+  });
 });
 
 // Manager creates an order. Amount arrives in EGP; store as piastres.
