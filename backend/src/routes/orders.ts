@@ -340,22 +340,46 @@ orderRouter.post('/orders', requireManager, async (req, res) => {
   res.status(201).json(order);
 });
 
-// Manager assigns an order to a driver.
+// Manager assigns — or reassigns — an order to a driver.
 orderRouter.post('/orders/:id/assign', requireManager, async (req, res) => {
-  const { driverId } = req.body;
-  const otp = String(Math.floor(1000 + Math.random() * 9000)); // 4-digit handover code
+  const rid = req.auth!.restaurantId;
+  const { driverId } = req.body as { driverId?: string };
+  if (!driverId) return res.status(400).json({ error: 'driverId required' });
+
+  const existing = await prisma.order.findFirst({ where: { id: req.params.id, restaurantId: rid } });
+  if (!existing) return res.status(404).json({ error: 'not found' });
+  if (existing.status === 'Delivered') return res.status(400).json({ error: 'order already delivered' });
+  if (existing.status === 'Cancelled') return res.status(400).json({ error: 'order is cancelled' });
+
+  // The target driver must belong to this restaurant.
+  const driver = await prisma.driver.findFirst({ where: { id: driverId, restaurantId: rid } });
+  if (!driver) return res.status(404).json({ error: 'driver not found' });
+
+  const prevDriverId = existing.driverId;
+  const otp = String(Math.floor(1000 + Math.random() * 9000)); // fresh handover code
+
   const order = await prisma.$transaction(async (tx) => {
     const o = await tx.order.update({
-      where: { id: req.params.id },
+      where: { id: existing.id },
       data: { driverId, status: 'Assigned', assignedAt: new Date(), deliveryOtp: otp },
     });
     await tx.driver.update({ where: { id: driverId }, data: { status: 'Delivering' } });
+    // Reassignment: free the previous driver if this was their only live order.
+    if (prevDriverId && prevDriverId !== driverId) {
+      const stillActive = await tx.order.count({
+        where: { driverId: prevDriverId, status: { in: ['Assigned', 'PickedUp'] } },
+      });
+      if (stillActive === 0) {
+        await tx.driver.update({ where: { id: prevDriverId }, data: { status: 'Idle' } });
+      }
+    }
     return o;
   });
-  // Ping the assigned driver's device (new job).
-  const driver = await prisma.driver.findUnique({ where: { id: driverId }, select: { fcmToken: true } });
-  pushTo([driver?.fcmToken], 'طلب جديد · New order', order.customerAddress);
-  pushDashboardEvent(req.auth!.restaurantId, { type: 'order_assigned', order });
+
+  // Ping the (new) assigned driver's device.
+  const fcm = await prisma.driver.findUnique({ where: { id: driverId }, select: { fcmToken: true } });
+  pushTo([fcm?.fcmToken], 'طلب جديد · New order', order.customerAddress);
+  pushDashboardEvent(rid, { type: 'order_assigned', order });
   res.json(order);
 });
 
