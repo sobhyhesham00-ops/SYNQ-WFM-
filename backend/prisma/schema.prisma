@@ -128,6 +128,7 @@ enum OrderStatus {
   Assigned   // given to a driver
   PickedUp   // driver has food, en route
   Delivered  // completed, cash collected
+  Failed     // driver couldn't deliver (customer not home / refused) — no cash
   Cancelled
 }
 

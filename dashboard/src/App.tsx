@@ -309,7 +309,7 @@ export default function App() {
               <span className="subtle" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                 <span
                   className="status-dot"
-                  style={{ background: o.status === 'Delivered' ? 'var(--ok)' : o.status === 'Pending' ? '#f0a500' : 'var(--brand)' }}
+                  style={{ background: o.status === 'Delivered' ? 'var(--ok)' : o.status === 'Failed' ? 'var(--danger)' : o.status === 'Pending' ? '#f0a500' : 'var(--brand)' }}
                 />
                 {t(`status.${o.status}`)}
               </span>
