@@ -136,11 +136,24 @@ export const api = {
     URL.revokeObjectURL(url);
   },
 
+  // Download the per-driver performance report CSV.
+  async exportDriversCsv(token: string, days = 30) {
+    const res = await fetch(`${API_BASE}/api/reports/drivers.csv?days=${days}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `elkaptin-drivers-${days}d.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  },
+
   state: (token: string): Promise<{ business: Business; drivers: Driver[]; orders: Order[] }> =>
     req('/api/state', token),
 
   orderHistory: (token: string, params: {
-    status?: string; driverId?: string; from?: string; to?: string; limit?: number; offset?: number;
+    q?: string; status?: string; driverId?: string; from?: string; to?: string; limit?: number; offset?: number;
   }): Promise<{ orders: Order[]; total: number; limit: number; offset: number }> => {
     const q = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') q.set(k, String(v)); });
@@ -148,6 +161,11 @@ export const api = {
   },
 
   cashDrawer: (token: string) => req('/api/cash-drawer', token),
+
+  attention: (token: string): Promise<{
+    failed: Order[]; stalePending: Order[]; staleAssigned: Order[];
+    count: number; thresholds: { stalePendingMin: number; staleAssignedMin: number };
+  }> => req('/api/orders/attention', token),
 
   settle: (token: string, driverId: string) =>
     req(`/api/drivers/${driverId}/settle`, token, { method: 'POST' }),

@@ -11,6 +11,7 @@ export function OrderHistory({ token, drivers, onClose }: {
   token: string; drivers: Driver[]; onClose: () => void;
 }) {
   const { t } = useLang();
+  const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [driverId, setDriverId] = useState('');
   const [from, setFrom] = useState('');
@@ -20,11 +21,13 @@ export function OrderHistory({ token, drivers, onClose }: {
 
   useEffect(() => {
     let live = true;
-    api.orderHistory(token, { status, driverId, from, to, limit: LIMIT, offset })
+    // Debounce the free-text search so we don't fetch on every keystroke.
+    const run = () => api.orderHistory(token, { q, status, driverId, from, to, limit: LIMIT, offset })
       .then((d) => { if (live) setData(d); })
       .catch(() => { if (live) setData({ orders: [], total: 0 }); });
-    return () => { live = false; };
-  }, [token, status, driverId, from, to, offset]);
+    const timer = setTimeout(run, q ? 300 : 0);
+    return () => { live = false; clearTimeout(timer); };
+  }, [token, q, status, driverId, from, to, offset]);
 
   // Changing any filter jumps back to the first page.
   const onFilter = (setter: (v: string) => void) => (v: string) => { setter(v); setOffset(0); };
@@ -39,6 +42,13 @@ export function OrderHistory({ token, drivers, onClose }: {
           <button className="ghost-btn" onClick={onClose}>✕</button>
         </div>
 
+        <input
+          className="mini-input"
+          style={{ width: '100%', marginBottom: 8 }}
+          placeholder={t('searchOrders')}
+          value={q}
+          onChange={(e) => onFilter(setQ)(e.target.value)}
+        />
         <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
           <select className="select" value={status} onChange={(e) => onFilter(setStatus)(e.target.value)}>
             <option value="">{t('allStatuses')}</option>
