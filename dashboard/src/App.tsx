@@ -261,6 +261,18 @@ export default function App() {
                       {can(plan, 'trackLinks') ? '🔗' : '🔒'} {t('shareTracking')}
                     </button>
                   )}
+                  {o.status !== 'Delivered' && o.status !== 'Cancelled' && (
+                    <button
+                      className="link-btn"
+                      style={{ color: 'var(--danger)' }}
+                      onClick={() => {
+                        if (!window.confirm(t('cancelConfirm'))) return;
+                        api.cancelOrder(token, o.id).then(refresh);
+                      }}
+                    >
+                      ✕ {t('cancelOrder')}
+                    </button>
+                  )}
                 </div>
                 {o.status === 'Pending' && (
                   <select

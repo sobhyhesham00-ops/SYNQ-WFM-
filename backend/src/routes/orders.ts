@@ -397,6 +397,43 @@ orderRouter.post('/orders/:id/status', requireDriver, async (req, res) => {
   res.json(order);
 });
 
+// Manager cancels/voids an order before it's delivered (wrong order, customer
+// cancelled, duplicate). A Delivered order can't be cancelled — its cash is
+// already in the drawer.
+orderRouter.post('/orders/:id/cancel', requireManager, async (req, res) => {
+  const { reason } = (req.body ?? {}) as { reason?: string };
+  const existing = await prisma.order.findFirst({
+    where: { id: req.params.id, restaurantId: req.auth!.restaurantId },
+  });
+  if (!existing) return res.status(404).json({ error: 'not found' });
+  if (existing.status === 'Delivered') return res.status(400).json({ error: 'cannot cancel a delivered order' });
+  if (existing.status === 'Cancelled') return res.status(409).json({ error: 'already cancelled' });
+
+  const trimmed = (reason ?? '').trim();
+  const order = await prisma.order.update({
+    where: { id: existing.id },
+    data: {
+      status: 'Cancelled',
+      notes: trimmed
+        ? `${existing.notes ? existing.notes + ' · ' : ''}Cancelled: ${trimmed}`
+        : existing.notes,
+    },
+  });
+
+  // Free the driver if this was their only live order.
+  if (existing.driverId) {
+    const active = await prisma.order.count({
+      where: { driverId: existing.driverId, status: { in: ['Assigned', 'PickedUp'] } },
+    });
+    if (active === 0) {
+      await prisma.driver.update({ where: { id: existing.driverId }, data: { status: 'Idle' } });
+    }
+  }
+
+  pushDashboardEvent(req.auth!.restaurantId, { type: 'order_cancelled', order });
+  res.json(order);
+});
+
 // Cashier settles a driver's cash at end of shift.
 orderRouter.post('/drivers/:id/settle', requireManager, async (req, res) => {
   if (!(await gate(res, req.auth!.restaurantId, 'cashDrawer'))) return;
