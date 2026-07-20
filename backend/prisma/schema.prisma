@@ -108,6 +108,8 @@ model Driver {
   phone        String
   passwordHash String       // drivers log in with phone + PIN/password
   status       DriverStatus @default(Offline)
+  // Deactivated when a driver leaves the business: login blocked, off the roster.
+  active       Boolean      @default(true)
 
   // Hot columns: latest known position, updated on every location frame.
   currentLat      Float?

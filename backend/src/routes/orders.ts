@@ -30,9 +30,9 @@ async function gate(res: import('express').Response, rid: string, f: Feature): P
 orderRouter.post('/drivers', requireManager, async (req, res) => {
   const { name, phone, password } = req.body;
   if (!name || !phone || !password) return res.status(400).json({ error: 'missing fields' });
-  // Enforce the plan's driver cap (existing drivers are grandfathered).
+  // Enforce the plan's driver cap — only active drivers count.
   const rid = req.auth!.restaurantId;
-  const count = await prisma.driver.count({ where: { restaurantId: rid } });
+  const count = await prisma.driver.count({ where: { restaurantId: rid, active: true } });
   if (count >= planDriverCap(await planOf(rid))) {
     return res.status(402).json({ error: 'plan_upgrade_required', feature: 'driverCap' });
   }
@@ -49,6 +49,46 @@ orderRouter.post('/drivers', requireManager, async (req, res) => {
   });
   pushDashboardEvent(req.auth!.restaurantId, { type: 'driver_added', driver });
   res.status(201).json(driver);
+});
+
+// Deactivate / reactivate a driver (they left the business, or came back).
+// Deactivated drivers can't log in and don't count against the plan cap.
+orderRouter.patch('/drivers/:id', requireManager, async (req, res) => {
+  const rid = req.auth!.restaurantId;
+  const { active } = req.body as { active?: boolean };
+  if (typeof active !== 'boolean') return res.status(400).json({ error: 'active (boolean) required' });
+
+  const existing = await prisma.driver.findFirst({ where: { id: req.params.id, restaurantId: rid } });
+  if (!existing) return res.status(404).json({ error: 'not found' });
+
+  // Reactivating must respect the plan's active-driver cap.
+  if (active && !existing.active) {
+    const activeCount = await prisma.driver.count({ where: { restaurantId: rid, active: true } });
+    if (activeCount >= planDriverCap(await planOf(rid))) {
+      return res.status(402).json({ error: 'plan_upgrade_required', feature: 'driverCap' });
+    }
+  }
+
+  const driver = await prisma.driver.update({
+    where: { id: existing.id },
+    data: { active, ...(active ? {} : { status: 'Offline' }) },
+    select: { id: true, name: true, phone: true, status: true, active: true, currentLat: true, currentLng: true, lastSeenAt: true },
+  });
+  pushDashboardEvent(rid, { type: 'driver_updated', driver });
+  res.json(driver);
+});
+
+// Reset a driver's PIN/password (they forgot it, or you're rotating it).
+orderRouter.post('/drivers/:id/reset-pin', requireManager, async (req, res) => {
+  const rid = req.auth!.restaurantId;
+  const { password } = req.body as { password?: string };
+  if (!password || String(password).length < 4) {
+    return res.status(400).json({ error: 'PIN must be at least 4 characters' });
+  }
+  const existing = await prisma.driver.findFirst({ where: { id: req.params.id, restaurantId: rid } });
+  if (!existing) return res.status(404).json({ error: 'not found' });
+  await prisma.driver.update({ where: { id: existing.id }, data: { passwordHash: bcrypt.hashSync(password, 10) } });
+  res.json({ ok: true });
 });
 
 // Weekly cash report as CSV (for the owner's books). ?days=7 (default).
@@ -295,9 +335,10 @@ orderRouter.get('/state', requireManager, async (req, res) => {
     prisma.driver.findMany({
       where: { restaurantId: rid },
       select: {
-        id: true, name: true, phone: true, status: true,
+        id: true, name: true, phone: true, status: true, active: true,
         currentLat: true, currentLng: true, lastSeenAt: true,
       },
+      orderBy: { active: 'desc' },
     }),
     prisma.order.findMany({
       where: { restaurantId: rid, status: { not: 'Cancelled' } },

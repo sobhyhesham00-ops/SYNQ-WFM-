@@ -121,6 +121,7 @@ authRouter.post('/auth/driver/login', loginLimiter, async (req, res) => {
   if (!driver || !(await bcrypt.compare(password, driver.passwordHash))) {
     return res.status(401).json({ error: 'invalid credentials' });
   }
+  if (!driver.active) return res.status(403).json({ error: 'account disabled' });
   const token = sign({
     restaurantId: driver.restaurantId,
     driverId: driver.id,

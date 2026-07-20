@@ -45,7 +45,7 @@ export default function App() {
   function driversByProximity() {
     const shop = business?.shopLat != null && business?.shopLng != null
       ? { lat: business.shopLat, lng: business.shopLng } : null;
-    const idle = drivers.filter((d) => d.status !== 'Offline');
+    const idle = drivers.filter((d) => d.status !== 'Offline' && d.active !== false);
     if (!shop) return idle.map((d) => ({ d, km: null as number | null }));
     return idle
       .map((d) => ({
@@ -201,7 +201,9 @@ export default function App() {
                   </div>
                   <div className="subtle">{d.phone}</div>
                 </div>
-                <span className={`chip ${d.status}`}>{t(`status.${d.status}`)}</span>
+                {d.active === false
+                  ? <span className="chip Offline">{t('inactive')}</span>
+                  : <span className={`chip ${d.status}`}>{t(`status.${d.status}`)}</span>}
               </div>
               <div className="row" style={{ marginTop: 10 }}>
                 <div className="grow subtle">{t('owesCashier')}</div>
@@ -225,6 +227,31 @@ export default function App() {
                   onClick={() => toggleReplay(d.id)}
                 >
                   {replayDriver === d.id ? `■ ${t('stop')}` : `▶ ${t('route')}`}
+                </button>
+              </div>
+              <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                <button
+                  className="ghost-pill"
+                  onClick={async () => {
+                    const pin = window.prompt(t('newPin'));
+                    if (!pin) return;
+                    await api.resetDriverPin(token, d.id, pin);
+                    alert(t('pinReset'));
+                  }}
+                >
+                  🔑 {t('resetPin')}
+                </button>
+                <button
+                  className="ghost-pill"
+                  style={{ color: d.active === false ? 'var(--ok)' : 'var(--danger)' }}
+                  onClick={async () => {
+                    const activate = d.active === false;
+                    if (!activate && !window.confirm(t('deactivateConfirm'))) return;
+                    await api.setDriverActive(token, d.id, activate);
+                    refresh();
+                  }}
+                >
+                  {d.active === false ? `✓ ${t('reactivate')}` : `⊘ ${t('deactivate')}`}
                 </button>
               </div>
             </div>
