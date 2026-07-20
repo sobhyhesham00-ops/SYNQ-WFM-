@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, egp, WS_BASE, API_BASE, type Driver, type Order, type Business } from './api';
 import { LiveMap } from './LiveMap';
 import { useTracking } from './useTracking';
@@ -44,8 +44,8 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showAttention, setShowAttention] = useState(false);
   const [attentionCount, setAttentionCount] = useState(0);
-  const [toasts, setToasts] = useState<{ id: number; kind: 'error' | 'info' | 'ok'; text: string }[]>([]);
-  const pushToast = (kind: 'error' | 'info' | 'ok', text: string) => {
+  const [toasts, setToasts] = useState<{ id: number; kind: 'error' | 'warn' | 'info' | 'ok'; text: string }[]>([]);
+  const pushToast = (kind: 'error' | 'warn' | 'info' | 'ok', text: string) => {
     const id = Date.now() + Math.random();
     setToasts((ts) => [...ts, { id, kind, text }]);
     setTimeout(() => setToasts((ts) => ts.filter((x) => x.id !== id)), 6000);
@@ -115,6 +115,40 @@ export default function App() {
     api.attention(token).then((d) => setAttentionCount(d.count)).catch(() => {});
   }, [token, refreshKey]);
 
+  // Staleness is time-based (no WS event fires when an order crosses the "waiting
+  // too long" threshold), so poll the attention queue and toast newly-stale ones.
+  const alertedStale = useRef<Set<string>>(new Set());
+  const firstAttentionPoll = useRef(true);
+  useEffect(() => {
+    if (!token) return;
+    let live = true;
+    const poll = async () => {
+      try {
+        const d = await api.attention(token);
+        if (!live) return;
+        setAttentionCount(d.count);
+        const stale = [...d.stalePending, ...d.staleAssigned];
+        if (firstAttentionPoll.current) {
+          // On first load, seed the set and show one summary toast (not a storm).
+          firstAttentionPoll.current = false;
+          stale.forEach((o) => alertedStale.current.add(o.id));
+          if (d.count > 0) pushToast('warn', t('attentionSummary', { n: String(d.count) }));
+        } else {
+          for (const o of stale) {
+            if (!alertedStale.current.has(o.id)) {
+              alertedStale.current.add(o.id);
+              pushToast('warn', t('staleToast', { addr: o.customerAddress }));
+            }
+          }
+        }
+      } catch { /* offline — try again next tick */ }
+    };
+    poll();
+    const iv = setInterval(poll, 60_000);
+    return () => { live = false; clearInterval(iv); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   function onLogin(tok: string, n: string) {
     localStorage.setItem('meshwar_token', tok);
     localStorage.setItem('meshwar_name', n);
@@ -158,7 +192,7 @@ export default function App() {
           {toasts.map((x) => (
             <div key={x.id} role="status" onClick={() => { setShowAttention(true); }} style={{
               cursor: 'pointer',
-              background: x.kind === 'error' ? 'var(--danger)' : x.kind === 'ok' ? 'var(--ok)' : 'var(--brand)',
+              background: x.kind === 'error' ? 'var(--danger)' : x.kind === 'warn' ? '#f0a500' : x.kind === 'ok' ? 'var(--ok)' : 'var(--brand)',
               color: '#fff', padding: '11px 15px', borderRadius: 12,
               boxShadow: '0 8px 24px rgba(0,0,0,.22)', fontWeight: 600, fontSize: 13, maxWidth: 320,
             }}>{x.text}</div>
