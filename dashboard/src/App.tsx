@@ -274,13 +274,13 @@ export default function App() {
                     </button>
                   )}
                 </div>
-                {o.status === 'Pending' && (
+                {o.status !== 'Delivered' && o.status !== 'Cancelled' && (
                   <select
                     className="select"
                     defaultValue=""
                     onChange={(e) => e.target.value && api.assign(token, o.id, e.target.value).then(refresh)}
                   >
-                    <option value="" disabled>{t('assignTo')}</option>
+                    <option value="" disabled>{o.status === 'Pending' ? t('assignTo') : t('reassignTo')}</option>
                     {driversByProximity().map(({ d, km }, i) => (
                       <option key={d.id} value={d.id}>
                         {d.name}
