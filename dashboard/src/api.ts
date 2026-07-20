@@ -148,6 +148,11 @@ export const api = {
   cancelOrder: (token: string, orderId: string, reason?: string) =>
     req(`/api/orders/${orderId}/cancel`, token, { method: 'POST', body: JSON.stringify({ reason }) }),
 
+  editOrder: (token: string, orderId: string, patch: {
+    customerAddress?: string; landmark?: string; customerPhone?: string;
+    totalCashEGP?: number; requiresPrescription?: boolean;
+  }) => req(`/api/orders/${orderId}`, token, { method: 'PATCH', body: JSON.stringify(patch) }),
+
   route: (token: string, driverId: string): Promise<{ points: { lat: number; lng: number; timestamp: string }[] }> =>
     req(`/api/drivers/${driverId}/route`, token),
 };

@@ -33,6 +33,7 @@ export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [route, setRoute] = useState<{ lat: number; lng: number }[] | null>(null);
   const [replayDriver, setReplayDriver] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const [refreshKey, setRefreshKey] = useState(0);
   const [showPlans, setShowPlans] = useState(false);
@@ -238,57 +239,71 @@ export default function App() {
           {orders.map((o) => (
             <div className="order" key={o.id}>
               <div className="grow">
-                <div style={{ fontSize: 13, fontWeight: 600 }}>
-                  {o.customerAddress}
-                  {o.requiresPrescription && <span className="rx" title={t('prescriptionReq')}>℞</span>}
-                </div>
-                {o.landmark && <div className="subtle">📍 {o.landmark}</div>}
-                <div className="subtle">{egp(o.totalCashToCollect)}</div>
-                <div className="row" style={{ gap: 10, marginTop: 4 }}>
-                  {o.customerPhone && (
-                    <a className="link-btn" href={`tel:${o.customerPhone}`}>📞 {t('call')}</a>
-                  )}
-                  {(o.status === 'Assigned' || o.status === 'PickedUp') && (
-                    <button
-                      className="link-btn"
-                      onClick={() => {
-                        if (!gated('trackLinks')) return;
-                        const url = `${API_BASE}/t/${o.publicToken}`;
-                        navigator.clipboard?.writeText(url);
-                        alert(t('linkCopied', { url }));
-                      }}
-                    >
-                      {can(plan, 'trackLinks') ? '🔗' : '🔒'} {t('shareTracking')}
-                    </button>
-                  )}
-                  {o.status !== 'Delivered' && o.status !== 'Cancelled' && (
-                    <button
-                      className="link-btn"
-                      style={{ color: 'var(--danger)' }}
-                      onClick={() => {
-                        if (!window.confirm(t('cancelConfirm'))) return;
-                        api.cancelOrder(token, o.id).then(refresh);
-                      }}
-                    >
-                      ✕ {t('cancelOrder')}
-                    </button>
-                  )}
-                </div>
-                {o.status !== 'Delivered' && o.status !== 'Cancelled' && (
-                  <select
-                    className="select"
-                    defaultValue=""
-                    onChange={(e) => e.target.value && api.assign(token, o.id, e.target.value).then(refresh)}
-                  >
-                    <option value="" disabled>{o.status === 'Pending' ? t('assignTo') : t('reassignTo')}</option>
-                    {driversByProximity().map(({ d, km }, i) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                        {km != null ? ` · ${km.toFixed(1)} km` : ''}
-                        {i === 0 && km != null ? ` · 🎯 ${t('nearest')}` : ''}
-                      </option>
-                    ))}
-                  </select>
+                {editingId === o.id ? (
+                  <OrderEditor
+                    order={o}
+                    isPharmacy={isPharmacy}
+                    onCancel={() => setEditingId(null)}
+                    onSave={(patch) => api.editOrder(token, o.id, patch).then(() => { setEditingId(null); refresh(); })}
+                  />
+                ) : (
+                  <>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>
+                      {o.customerAddress}
+                      {o.requiresPrescription && <span className="rx" title={t('prescriptionReq')}>℞</span>}
+                    </div>
+                    {o.landmark && <div className="subtle">📍 {o.landmark}</div>}
+                    <div className="subtle">{egp(o.totalCashToCollect)}</div>
+                    <div className="row" style={{ gap: 10, marginTop: 4 }}>
+                      {o.customerPhone && (
+                        <a className="link-btn" href={`tel:${o.customerPhone}`}>📞 {t('call')}</a>
+                      )}
+                      {(o.status === 'Assigned' || o.status === 'PickedUp') && (
+                        <button
+                          className="link-btn"
+                          onClick={() => {
+                            if (!gated('trackLinks')) return;
+                            const url = `${API_BASE}/t/${o.publicToken}`;
+                            navigator.clipboard?.writeText(url);
+                            alert(t('linkCopied', { url }));
+                          }}
+                        >
+                          {can(plan, 'trackLinks') ? '🔗' : '🔒'} {t('shareTracking')}
+                        </button>
+                      )}
+                      {o.status !== 'Delivered' && o.status !== 'Cancelled' && (
+                        <button className="link-btn" onClick={() => setEditingId(o.id)}>✎ {t('edit')}</button>
+                      )}
+                      {o.status !== 'Delivered' && o.status !== 'Cancelled' && (
+                        <button
+                          className="link-btn"
+                          style={{ color: 'var(--danger)' }}
+                          onClick={() => {
+                            if (!window.confirm(t('cancelConfirm'))) return;
+                            api.cancelOrder(token, o.id).then(refresh);
+                          }}
+                        >
+                          ✕ {t('cancelOrder')}
+                        </button>
+                      )}
+                    </div>
+                    {o.status !== 'Delivered' && o.status !== 'Cancelled' && (
+                      <select
+                        className="select"
+                        defaultValue=""
+                        onChange={(e) => e.target.value && api.assign(token, o.id, e.target.value).then(refresh)}
+                      >
+                        <option value="" disabled>{o.status === 'Pending' ? t('assignTo') : t('reassignTo')}</option>
+                        {driversByProximity().map(({ d, km }, i) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name}
+                            {km != null ? ` · ${km.toFixed(1)} km` : ''}
+                            {i === 0 && km != null ? ` · 🎯 ${t('nearest')}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </>
                 )}
               </div>
               <span className="subtle" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
@@ -335,6 +350,42 @@ function NewOrder({ isPharmacy, onCreate }: {
             setAddr(''); setLandmark(''); setAmt(''); setRx(false);
           }
         }}>+</button>
+      </div>
+    </div>
+  );
+}
+
+function OrderEditor({ order, isPharmacy, onSave, onCancel }: {
+  order: Order;
+  isPharmacy: boolean;
+  onSave: (patch: { customerAddress?: string; landmark?: string; customerPhone?: string; totalCashEGP?: number; requiresPrescription?: boolean }) => void;
+  onCancel: () => void;
+}) {
+  const { t } = useLang();
+  const [addr, setAddr] = useState(order.customerAddress);
+  const [landmark, setLandmark] = useState(order.landmark ?? '');
+  const [phone, setPhone] = useState(order.customerPhone ?? '');
+  const [amt, setAmt] = useState((order.totalCashToCollect / 100).toString());
+  const [rx, setRx] = useState(order.requiresPrescription);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <input className="mini-input" placeholder={t('customerAddress')} value={addr} onChange={(e) => setAddr(e.target.value)} />
+      <input className="mini-input" placeholder={t('landmark')} value={landmark} onChange={(e) => setLandmark(e.target.value)} />
+      <input className="mini-input" placeholder={t('phone')} value={phone} onChange={(e) => setPhone(e.target.value)} />
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input className="mini-input" style={{ width: 80 }} placeholder="EGP" value={amt} onChange={(e) => setAmt(e.target.value)} />
+        {isPharmacy && (
+          <label className="subtle" style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+            <input type="checkbox" checked={rx} onChange={(e) => setRx(e.target.checked)} /> {t('prescriptionReq')}
+          </label>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button className="add-btn" style={{ flex: 1, width: 'auto' }} onClick={() => {
+          if (!addr.trim() || !(Number(amt) >= 0)) return;
+          onSave({ customerAddress: addr.trim(), landmark, customerPhone: phone, totalCashEGP: Number(amt), requiresPrescription: rx });
+        }}>{t('save')}</button>
+        <button className="link-btn" onClick={onCancel}>{t('cancel')}</button>
       </div>
     </div>
   );
