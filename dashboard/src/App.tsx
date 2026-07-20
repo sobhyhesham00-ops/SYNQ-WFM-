@@ -10,6 +10,7 @@ import { Analytics } from './Analytics';
 import { Plans } from './Plans';
 import { Leaderboard } from './Leaderboard';
 import { DailySummary } from './DailySummary';
+import { OrderHistory } from './OrderHistory';
 import { can, type Feature } from './plans';
 import { useLang } from './i18n';
 
@@ -39,6 +40,7 @@ export default function App() {
   const [showPlans, setShowPlans] = useState(false);
   const [showBoard, setShowBoard] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const { pins, drawers } = useTracking(WS_BASE, token ?? '');
 
   // Order idle drivers by proximity to the shop (nearest first) for assignment.
@@ -126,6 +128,7 @@ export default function App() {
       {plansModal}
       {showBoard && <Leaderboard token={token!} onClose={() => setShowBoard(false)} />}
       {showSummary && <DailySummary token={token!} onClose={() => setShowSummary(false)} />}
+      {showHistory && <OrderHistory token={token!} drivers={drivers} onClose={() => setShowHistory(false)} />}
       <div className="map-pane">
         <LiveMap drivers={drivers} livePins={pins} route={route} />
         {replayDriver && (
@@ -147,6 +150,7 @@ export default function App() {
             )}
           </div>
           <div className="row" style={{ gap: 8 }}>
+            <button className="ghost-btn" title={t('history')} onClick={() => setShowHistory(true)}>📜</button>
             <button className="ghost-btn" title={t('dailySummary')} onClick={() => setShowSummary(true)}>📋</button>
             <button className="ghost-btn" title={t('leaderboard')} onClick={() => { if (gated('analytics')) setShowBoard(true); }}>🏆</button>
             <button className={`ghost-btn ${business?.ramadanMode ? 'moon-on' : ''}`} title="Ramadan mode" onClick={toggleRamadan}>🌙</button>

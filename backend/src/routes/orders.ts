@@ -363,6 +363,32 @@ orderRouter.get('/state', requireManager, async (req, res) => {
   res.json({ business, drivers: driversWithRating, orders });
 });
 
+// Order history with filters (status, driver, date range) + pagination.
+// Unlike /state (live board), this includes Delivered/Failed/Cancelled.
+orderRouter.get('/orders/history', requireManager, async (req, res) => {
+  const rid = req.auth!.restaurantId;
+  const { status, driverId, from, to } = req.query as Record<string, string | undefined>;
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+  const where: Prisma.OrderWhereInput = { restaurantId: rid };
+  const STATUSES = ['Pending', 'Assigned', 'PickedUp', 'Delivered', 'Failed', 'Cancelled'];
+  if (status && STATUSES.includes(status)) where.status = status as (typeof STATUSES)[number] as never;
+  if (driverId) where.driverId = driverId;
+  if (from || to) {
+    const range: Prisma.DateTimeFilter = {};
+    if (from) { const d = new Date(from); if (!Number.isNaN(+d)) range.gte = d; }
+    if (to) { const d = new Date(to); if (!Number.isNaN(+d)) { d.setHours(23, 59, 59, 999); range.lte = d; } }
+    where.createdAt = range;
+  }
+
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({ where, orderBy: { createdAt: 'desc' }, skip: offset, take: limit }),
+    prisma.order.count({ where }),
+  ]);
+  res.json({ orders, total, limit, offset });
+});
+
 // Manager creates an order. Amount arrives in EGP; store as piastres.
 orderRouter.post('/orders', requireManager, async (req, res) => {
   const { customerAddress, customerPhone, landmark, notes, requiresPrescription, totalCashEGP } = req.body;
