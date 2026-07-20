@@ -145,6 +145,9 @@ export const api = {
   assign: (token: string, orderId: string, driverId: string) =>
     req(`/api/orders/${orderId}/assign`, token, { method: 'POST', body: JSON.stringify({ driverId }) }),
 
+  cancelOrder: (token: string, orderId: string, reason?: string) =>
+    req(`/api/orders/${orderId}/cancel`, token, { method: 'POST', body: JSON.stringify({ reason }) }),
+
   route: (token: string, driverId: string): Promise<{ points: { lat: number; lng: number; timestamp: string }[] }> =>
     req(`/api/drivers/${driverId}/route`, token),
 };
