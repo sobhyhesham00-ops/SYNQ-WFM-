@@ -44,13 +44,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     }
   }
 
-  Future<void> _setStatus(String next) async {
+  Future<void> _setStatus(String next, {String? reason}) async {
     setState(() { _busy = true; _otpError = null; });
     try {
       await widget.api.setStatus(widget.orderId, next,
-          otp: next == 'Delivered' ? _otp.text.trim() : null);
+          otp: next == 'Delivered' ? _otp.text.trim() : null, reason: reason);
       setState(() => _status = next);
-      if (next == 'Delivered' && mounted) Navigator.of(context).pop(true);
+      if ((next == 'Delivered' || next == 'Failed') && mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (e.toString().contains('wrong_otp')) {
         setState(() => _otpError = 'الكود غلط · Wrong code');
@@ -60,6 +60,25 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  // Driver couldn't deliver (customer not home / refused / bad address).
+  Future<void> _confirmFailed() async {
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(tr('whyFailed'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          ),
+          for (final r in const ['notHome', 'refused', 'wrongAddress'])
+            ListTile(title: Text(tr(r)), onTap: () => Navigator.of(ctx).pop(tr(r))),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (reason != null) await _setStatus('Failed', reason: reason);
   }
 
   @override
@@ -139,6 +158,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                   child: _busy ? _spinner() : Text(tr('delivered')),
                 ),
               ],
+              if (_status != 'Delivered')
+                TextButton(
+                  onPressed: _busy ? null : _confirmFailed,
+                  child: Text(tr('couldntDeliver'),
+                    style: const TextStyle(color: MeshwarColors.danger, fontWeight: FontWeight.w700)),
+                ),
               const SizedBox(height: 8),
               Center(child: Text('Status: $_status', style: const TextStyle(color: MeshwarColors.muted, fontSize: 12))),
             ],

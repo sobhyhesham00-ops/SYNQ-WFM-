@@ -36,6 +36,11 @@ const Map<String, Map<String, String>> _dict = {
     'prescriptionReq': 'Prescription required',
     'locationNeeded': "Location is off — the shop can't see you. Turn on location to start your shift.",
     'openSettings': 'Open settings',
+    'couldntDeliver': "Couldn't deliver",
+    'whyFailed': "What happened?",
+    'notHome': 'Customer not home',
+    'refused': 'Customer refused',
+    'wrongAddress': 'Wrong / unreachable address',
   },
   'ar': {
     'signIn': 'دخول',
@@ -65,6 +70,11 @@ const Map<String, Map<String, String>> _dict = {
     'prescriptionReq': 'محتاجة روشتة',
     'locationNeeded': 'الموقع مقفول — المحل مش شايفك. فعّل الموقع عشان تبدأ الوردية.',
     'openSettings': 'افتح الإعدادات',
+    'couldntDeliver': 'معرفتش أوصّل',
+    'whyFailed': 'إيه اللي حصل؟',
+    'notHome': 'العميل مش موجود',
+    'refused': 'العميل رفض',
+    'wrongAddress': 'العنوان غلط / مش موصول',
   },
 };
 

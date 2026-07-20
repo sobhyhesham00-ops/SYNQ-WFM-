@@ -68,11 +68,15 @@ class DriverApi {
   }
 
   /// Update order status. Delivered requires the customer's 4-digit [otp].
-  Future<void> setStatus(String orderId, String status, {String? otp}) async {
+  Future<void> setStatus(String orderId, String status, {String? otp, String? reason}) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/orders/$orderId/status'),
       headers: _h,
-      body: jsonEncode({'status': status, if (otp != null) 'otp': otp}),
+      body: jsonEncode({
+        'status': status,
+        if (otp != null) 'otp': otp,
+        if (reason != null) 'reason': reason,
+      }),
     );
     if (res.statusCode == 400 && res.body.contains('wrong_otp')) {
       throw Exception('wrong_otp');

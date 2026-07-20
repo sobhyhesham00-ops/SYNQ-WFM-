@@ -417,34 +417,47 @@ orderRouter.post('/orders/:id/assign', requireManager, async (req, res) => {
   res.json(order);
 });
 
-// Driver marks picked up / delivered from the app.
+// Driver updates their own order: picked up, delivered (OTP), or failed.
 orderRouter.post('/orders/:id/status', requireDriver, async (req, res) => {
-  const { status, otp } = req.body as { status: 'PickedUp' | 'Delivered'; otp?: string };
-
-  // Delivered requires the customer's handover code (anti-dispute proof).
-  if (status === 'Delivered') {
-    const existing = await prisma.order.findUnique({
-      where: { id: req.params.id }, select: { deliveryOtp: true },
-    });
-    if (existing?.deliveryOtp && existing.deliveryOtp !== String(otp ?? '').trim()) {
-      return res.status(400).json({ error: 'wrong_otp' });
-    }
+  const { status, otp, reason } = req.body as {
+    status: 'PickedUp' | 'Delivered' | 'Failed'; otp?: string; reason?: string;
+  };
+  if (!['PickedUp', 'Delivered', 'Failed'].includes(status)) {
+    return res.status(400).json({ error: 'bad status' });
   }
 
+  // A driver may only update an order that is actually assigned to them.
+  const existing = await prisma.order.findFirst({
+    where: { id: req.params.id, driverId: req.auth!.driverId },
+  });
+  if (!existing) return res.status(404).json({ error: 'not found' });
+  if (existing.status === 'Delivered' || existing.status === 'Cancelled') {
+    return res.status(400).json({ error: 'order already closed' });
+  }
+
+  // Delivered requires the customer's handover code (anti-dispute proof).
+  if (status === 'Delivered' && existing.deliveryOtp && existing.deliveryOtp !== String(otp ?? '').trim()) {
+    return res.status(400).json({ error: 'wrong_otp' });
+  }
+
+  const trimmedReason = (reason ?? '').trim();
   const order = await prisma.order.update({
-    where: { id: req.params.id },
+    where: { id: existing.id },
     data: {
       status,
       ...(status === 'Delivered' ? { deliveredAt: new Date() } : {}),
+      ...(status === 'Failed' && trimmedReason
+        ? { notes: `${existing.notes ? existing.notes + ' · ' : ''}Failed: ${trimmedReason}` }
+        : {}),
     },
   });
 
-  // If the driver has no more active orders, flip them back to Idle.
-  if (status === 'Delivered') {
+  // Delivered or Failed closes the driver's involvement — free them if idle.
+  if ((status === 'Delivered' || status === 'Failed') && order.driverId) {
     const active = await prisma.order.count({
-      where: { driverId: order.driverId!, status: { in: ['Assigned', 'PickedUp'] } },
+      where: { driverId: order.driverId, status: { in: ['Assigned', 'PickedUp'] } },
     });
-    if (active === 0 && order.driverId) {
+    if (active === 0) {
       await prisma.driver.update({ where: { id: order.driverId }, data: { status: 'Idle' } });
     }
   }
