@@ -4,7 +4,7 @@
  * update live.  (Blueprint §1.3 step 5)
  */
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { pushDashboardEvent } from '../ws/tracking';
 import { getDriverCashDrawer, settleDriverCash } from '../services/cashDrawer';
@@ -338,6 +338,40 @@ orderRouter.post('/orders', requireManager, async (req, res) => {
   });
   pushDashboardEvent(req.auth!.restaurantId, { type: 'order_created', order });
   res.status(201).json(order);
+});
+
+// Manager edits an order's details before it's completed (mistyped address,
+// wrong amount, added landmark). A Delivered/Cancelled order is frozen.
+orderRouter.patch('/orders/:id', requireManager, async (req, res) => {
+  const rid = req.auth!.restaurantId;
+  const existing = await prisma.order.findFirst({ where: { id: req.params.id, restaurantId: rid } });
+  if (!existing) return res.status(404).json({ error: 'not found' });
+  if (existing.status === 'Delivered' || existing.status === 'Cancelled') {
+    return res.status(400).json({ error: 'cannot edit a completed order' });
+  }
+
+  const { customerAddress, landmark, customerPhone, notes, requiresPrescription, totalCashEGP } = req.body ?? {};
+  const data: Prisma.OrderUpdateInput = {};
+  if (customerAddress !== undefined) {
+    if (typeof customerAddress !== 'string' || !customerAddress.trim()) {
+      return res.status(400).json({ error: 'address cannot be empty' });
+    }
+    data.customerAddress = customerAddress.trim();
+  }
+  if (landmark !== undefined) data.landmark = landmark || null;
+  if (customerPhone !== undefined) data.customerPhone = customerPhone || null;
+  if (notes !== undefined) data.notes = notes || null;
+  if (requiresPrescription !== undefined) data.requiresPrescription = Boolean(requiresPrescription);
+  if (totalCashEGP !== undefined) {
+    const n = Number(totalCashEGP);
+    if (!Number.isFinite(n) || n < 0) return res.status(400).json({ error: 'bad amount' });
+    data.totalCashToCollect = Math.round(n * 100);
+  }
+  if (Object.keys(data).length === 0) return res.status(400).json({ error: 'nothing to update' });
+
+  const order = await prisma.order.update({ where: { id: existing.id }, data });
+  pushDashboardEvent(rid, { type: 'order_updated', order });
+  res.json(order);
 });
 
 // Manager assigns — or reassigns — an order to a driver.
