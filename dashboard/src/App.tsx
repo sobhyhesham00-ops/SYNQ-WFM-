@@ -44,7 +44,26 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showAttention, setShowAttention] = useState(false);
   const [attentionCount, setAttentionCount] = useState(0);
-  const { pins, drawers } = useTracking(WS_BASE, token ?? '');
+  const [toasts, setToasts] = useState<{ id: number; kind: 'error' | 'info' | 'ok'; text: string }[]>([]);
+  const pushToast = (kind: 'error' | 'info' | 'ok', text: string) => {
+    const id = Date.now() + Math.random();
+    setToasts((ts) => [...ts, { id, kind, text }]);
+    setTimeout(() => setToasts((ts) => ts.filter((x) => x.id !== id)), 6000);
+  };
+
+  // Live WS events → toast on a failed delivery, and keep the board + attention
+  // badge fresh whenever any order/driver/cash event lands.
+  const { pins, drawers } = useTracking(WS_BASE, token ?? '', (msg) => {
+    const type = msg.type as string | undefined;
+    const order = msg.order as { status?: string; customerAddress?: string } | undefined;
+    if (type === 'order_status' && order?.status === 'Failed') {
+      pushToast('error', t('failedToast', { addr: order.customerAddress ?? '' }));
+    }
+    if (type?.startsWith('order_') || type === 'cash_settled' || type === 'driver_updated' || type === 'driver_added') {
+      refresh();
+      if (token) api.attention(token).then((d) => setAttentionCount(d.count)).catch(() => {});
+    }
+  });
 
   // Order idle drivers by proximity to the shop (nearest first) for assignment.
   function driversByProximity() {
@@ -134,6 +153,18 @@ export default function App() {
 
   return (
     <div className="app">
+      {toasts.length > 0 && (
+        <div style={{ position: 'fixed', bottom: 16, insetInlineEnd: 16, display: 'flex', flexDirection: 'column', gap: 8, zIndex: 2000 }}>
+          {toasts.map((x) => (
+            <div key={x.id} role="status" onClick={() => { setShowAttention(true); }} style={{
+              cursor: 'pointer',
+              background: x.kind === 'error' ? 'var(--danger)' : x.kind === 'ok' ? 'var(--ok)' : 'var(--brand)',
+              color: '#fff', padding: '11px 15px', borderRadius: 12,
+              boxShadow: '0 8px 24px rgba(0,0,0,.22)', fontWeight: 600, fontSize: 13, maxWidth: 320,
+            }}>{x.text}</div>
+          ))}
+        </div>
+      )}
       {plansModal}
       {showBoard && <Leaderboard token={token!} onClose={() => setShowBoard(false)} />}
       {showSummary && <DailySummary token={token!} onClose={() => setShowSummary(false)} />}

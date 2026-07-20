@@ -8,11 +8,14 @@ interface DriverPin { driverId: string; lat: number; lng: number; ts: number }
 interface DrawerLine { orderId: string; amountPiastres: number }
 interface Drawer { driverId: string; totalEGP: string; lines: DrawerLine[] }
 
-export function useTracking(wsBase: string, token: string) {
+export function useTracking(wsBase: string, token: string, onEvent?: (msg: Record<string, unknown>) => void) {
   const [pins, setPins] = useState<Record<string, DriverPin>>({});
   const [drawers, setDrawers] = useState<Record<string, Drawer>>({});
   const [nonce, setNonce] = useState(0); // bump to force a reconnect
   const wsRef = useRef<WebSocket | null>(null);
+  // Keep the latest callback without re-opening the socket every render.
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
 
   useEffect(() => {
     // No token yet (logged out) → don't open a socket.
@@ -25,6 +28,7 @@ export function useTracking(wsBase: string, token: string) {
 
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
+      onEventRef.current?.(msg);
       switch (msg.type) {
         case 'driver_location':
           setPins((p) => ({ ...p, [msg.driverId]: msg }));
