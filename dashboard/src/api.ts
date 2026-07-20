@@ -27,7 +27,7 @@ export interface Order {
   status: string; driverId: string | null; deliveredAt: string | null; settled: boolean;
   publicToken: string;
   customerPhone: string | null; landmark: string | null; notes: string | null;
-  requiresPrescription: boolean;
+  requiresPrescription: boolean; createdAt?: string;
 }
 
 // Prefer the freshest token in storage (updated by a silent refresh) over the
@@ -138,6 +138,14 @@ export const api = {
 
   state: (token: string): Promise<{ business: Business; drivers: Driver[]; orders: Order[] }> =>
     req('/api/state', token),
+
+  orderHistory: (token: string, params: {
+    status?: string; driverId?: string; from?: string; to?: string; limit?: number; offset?: number;
+  }): Promise<{ orders: Order[]; total: number; limit: number; offset: number }> => {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') q.set(k, String(v)); });
+    return req(`/api/orders/history?${q.toString()}`, token);
+  },
 
   cashDrawer: (token: string) => req('/api/cash-drawer', token),
 
