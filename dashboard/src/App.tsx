@@ -11,6 +11,7 @@ import { Plans } from './Plans';
 import { Leaderboard } from './Leaderboard';
 import { DailySummary } from './DailySummary';
 import { OrderHistory } from './OrderHistory';
+import { AttentionQueue } from './AttentionQueue';
 import { can, type Feature } from './plans';
 import { useLang } from './i18n';
 
@@ -41,6 +42,8 @@ export default function App() {
   const [showBoard, setShowBoard] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showAttention, setShowAttention] = useState(false);
+  const [attentionCount, setAttentionCount] = useState(0);
   const { pins, drawers } = useTracking(WS_BASE, token ?? '');
 
   // Order idle drivers by proximity to the shop (nearest first) for assignment.
@@ -87,6 +90,12 @@ export default function App() {
 
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [token]);
 
+  // Keep the header "needs attention" badge current.
+  useEffect(() => {
+    if (!token) return;
+    api.attention(token).then((d) => setAttentionCount(d.count)).catch(() => {});
+  }, [token, refreshKey]);
+
   function onLogin(tok: string, n: string) {
     localStorage.setItem('meshwar_token', tok);
     localStorage.setItem('meshwar_name', n);
@@ -129,6 +138,7 @@ export default function App() {
       {showBoard && <Leaderboard token={token!} onClose={() => setShowBoard(false)} />}
       {showSummary && <DailySummary token={token!} onClose={() => setShowSummary(false)} />}
       {showHistory && <OrderHistory token={token!} drivers={drivers} onClose={() => setShowHistory(false)} />}
+      {showAttention && <AttentionQueue token={token!} drivers={drivers} onClose={() => setShowAttention(false)} />}
       <div className="map-pane">
         <LiveMap drivers={drivers} livePins={pins} route={route} />
         {replayDriver && (
@@ -150,6 +160,11 @@ export default function App() {
             )}
           </div>
           <div className="row" style={{ gap: 8 }}>
+            <button className="ghost-btn" title={t('attention')} onClick={() => setShowAttention(true)} style={{ position: 'relative' }}>
+              ⚠️{attentionCount > 0 && (
+                <span style={{ position: 'absolute', top: -3, insetInlineEnd: -3, background: 'var(--danger)', color: '#fff', borderRadius: 999, fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, lineHeight: '16px', textAlign: 'center', padding: '0 3px' }}>{attentionCount}</span>
+              )}
+            </button>
             <button className="ghost-btn" title={t('history')} onClick={() => setShowHistory(true)}>📜</button>
             <button className="ghost-btn" title={t('dailySummary')} onClick={() => setShowSummary(true)}>📋</button>
             <button className="ghost-btn" title={t('leaderboard')} onClick={() => { if (gated('analytics')) setShowBoard(true); }}>🏆</button>
@@ -184,8 +199,12 @@ export default function App() {
         {/* Cash drawer per driver */}
         <div className="section-head">
           <h3>{t('cashDrawer')}</h3>
-          <button className="link-btn" onClick={() => gated('csv') && api.exportCashCsv(token)}>
-            {can(plan, 'csv') ? '⬇' : '🔒'} {t('exportCsv')}</button>
+          <div className="row" style={{ gap: 12 }}>
+            <button className="link-btn" onClick={() => gated('csv') && api.exportCashCsv(token)}>
+              {can(plan, 'csv') ? '⬇' : '🔒'} {t('exportCsv')}</button>
+            <button className="link-btn" onClick={() => gated('csv') && api.exportDriversCsv(token)}>
+              {can(plan, 'csv') ? '⬇' : '🔒'} {t('exportDrivers')}</button>
+          </div>
         </div>
         {drivers.map((d) => {
           const drawer = drawers[d.id];
