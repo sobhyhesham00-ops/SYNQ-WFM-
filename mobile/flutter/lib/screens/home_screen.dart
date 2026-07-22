@@ -1,6 +1,8 @@
 // Driver home — fintech-styled: gradient "cash to hand over" hero, shift toggle,
 // and today's live orders (loaded from the backend).
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../theme.dart';
 import '../services/location_service.dart';
@@ -17,25 +19,94 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late final DriverApi _api = DriverApi(widget.token);
   bool _onShift = false;
   List<DriverOrder> _orders = [];
   bool _loading = true;
 
+  // Poll the order list while the screen is in the foreground so a driver sees
+  // a fresh assignment without pulling to refresh. Paused while backgrounded to
+  // save battery/data. `_knownIds` lets us announce only genuinely new orders.
+  static const _pollEvery = Duration(seconds: 25);
+  Timer? _poll;
+  final Set<String> _knownIds = {};
+  bool _seeded = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+    _startPolling();
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    _poll?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _load(announce: true); // catch anything that landed while backgrounded
+      _startPolling();
+    } else {
+      _poll?.cancel(); // don't poll in the background
+    }
+  }
+
+  void _startPolling() {
+    _poll?.cancel();
+    _poll = Timer.periodic(_pollEvery, (_) => _load(announce: true));
+  }
+
+  // Orders the driver still needs to act on (not finished/cancelled).
+  bool _actionable(DriverOrder o) =>
+      o.status != 'Delivered' && o.status != 'Cancelled' && o.status != 'Failed';
+
+  Future<void> _load({bool announce = false}) async {
     try {
       final orders = await _api.myOrders();
-      if (mounted) setState(() { _orders = orders; _loading = false; });
+      if (!mounted) return;
+
+      // Find new actionable orders since the last successful load.
+      final fresh = orders.where((o) => _actionable(o) && !_knownIds.contains(o.id)).toList();
+      for (final o in orders) {
+        _knownIds.add(o.id);
+      }
+      setState(() { _orders = orders; _loading = false; });
+
+      if (announce && _seeded && fresh.isNotEmpty) _announceNewOrder(fresh.first);
+      _seeded = true;
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _announceNewOrder(DriverOrder o) {
+    HapticFeedback.mediumImpact();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(tr('newOrder', vars: {'addr': o.address})),
+      duration: const Duration(seconds: 6),
+      action: SnackBarAction(
+        label: tr('view'),
+        onPressed: () async {
+          await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => DeliveryScreen(
+              api: _api,
+              orderId: o.id,
+              address: o.address,
+              cashEGP: double.tryParse(o.cashEGP) ?? 0,
+              initialStatus: o.status,
+            ),
+          ));
+          _load();
+        },
+      ),
+    ));
   }
 
   double get _toHandOver => _orders
