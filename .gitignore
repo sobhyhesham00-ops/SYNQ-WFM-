@@ -13,6 +13,11 @@ build/
 backend/dist/
 dashboard/dist/
 
+# Playwright
+dashboard/test-results/
+dashboard/playwright-report/
+dashboard/playwright/.cache/
+
 # Prisma
 backend/prisma/*.db
 
