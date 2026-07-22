@@ -19,7 +19,11 @@ const DRIVER_TTL = '12h';  // mobile has no refresh flow; keep a full shift
 export const authRouter = Router();
 
 // Throttle credential-stuffing: 8 login/register attempts per IP per 5 minutes.
-const loginLimiter = rateLimit({ windowMs: 5 * 60_000, max: 8 });
+// Disabled under NODE_ENV=test so the integration suite (many logins from one
+// IP) isn't throttled.
+const loginLimiter = process.env.NODE_ENV === 'test'
+  ? ((_req: unknown, _res: unknown, next: () => void) => next())
+  : rateLimit({ windowMs: 5 * 60_000, max: 8 });
 
 function sign(ctx: AuthContext, ttl: string = ACCESS_TTL): string {
   return jwt.sign(ctx, SECRET, { expiresIn: ttl });
