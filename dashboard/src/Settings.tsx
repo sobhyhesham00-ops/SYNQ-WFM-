@@ -4,6 +4,27 @@
 import { useState } from 'react';
 import { api, type Business } from './api';
 import { useLang } from './i18n';
+import { notifyState, requestNotify, beep, type NotifyState } from './notify';
+
+function AlertsCard() {
+  const { t } = useLang();
+  const [state, setState] = useState<NotifyState>(notifyState());
+  return (
+    <div className="card" style={{ marginBottom: 12 }}>
+      <div style={{ fontWeight: 700, fontSize: 14 }}>🔔 {t('desktopAlerts')}</div>
+      <div className="subtle" style={{ fontSize: 12, margin: '2px 0 10px' }}>{t('desktopAlertsHint')}</div>
+      {state === 'granted' ? (
+        <span className="subtle" style={{ color: 'var(--ok)', fontWeight: 700 }}>{t('alertsOn')}</span>
+      ) : state === 'denied' ? (
+        <span className="subtle" style={{ color: 'var(--danger)' }}>{t('alertsBlocked')}</span>
+      ) : state === 'unsupported' ? null : (
+        <button className="pill-btn" onClick={async () => { const s = await requestNotify(); setState(s); if (s === 'granted') beep(); }}>
+          🔔 {t('enableAlerts')}
+        </button>
+      )}
+    </div>
+  );
+}
 
 function ProfileCard({ token, business, onSaved }: {
   token: string; business: Business; onSaved: (b: Partial<Business>) => void;
@@ -82,6 +103,7 @@ export function Settings({ token, business, onClose, onSaved }: {
         </div>
 
         <ProfileCard token={token} business={business} onSaved={onSaved} />
+        <AlertsCard />
 
         <div className="card">
           <div style={{ fontWeight: 700, fontSize: 14 }}>📍 {t('shopLocation')}</div>

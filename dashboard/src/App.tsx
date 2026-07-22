@@ -14,6 +14,7 @@ import { OrderHistory } from './OrderHistory';
 import { AttentionQueue } from './AttentionQueue';
 import { RevenueChart } from './RevenueChart';
 import { Settings } from './Settings';
+import { beep, desktopNotify } from './notify';
 import { can, type Feature } from './plans';
 import { useLang } from './i18n';
 
@@ -68,7 +69,10 @@ export default function App() {
     const type = msg.type as string | undefined;
     const order = msg.order as { status?: string; customerAddress?: string } | undefined;
     if (type === 'order_status' && order?.status === 'Failed') {
-      pushToast('error', t('failedToast', { addr: order.customerAddress ?? '' }));
+      const text = t('failedToast', { addr: order.customerAddress ?? '' });
+      pushToast('error', text);
+      beep();
+      desktopNotify(t('attention'), text);
     }
     if (type?.startsWith('order_') || type === 'cash_settled' || type === 'driver_updated' || type === 'driver_added') {
       refresh();
