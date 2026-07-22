@@ -113,6 +113,11 @@ export const api = {
 
   analytics: (token: string): Promise<Analytics> => req('/api/analytics', token),
 
+  dailyAnalytics: (token: string, days = 14): Promise<{
+    days: number;
+    series: { date: string; deliveries: number; collectedPiastres: number; collectedEGP: string }[];
+  }> => req(`/api/analytics/daily?days=${days}`, token),
+
   dailySummary: (token: string): Promise<{
     businessName: string; date: string; deliveries: number; openOrders: number;
     collectedEGP: string; outstandingEGP: string; activeDrivers: number; totalDrivers: number;
