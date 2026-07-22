@@ -21,6 +21,7 @@ async function j(path: string, opts: { token?: string; method?: string; body?: u
   return { status: res.status, body: json };
 }
 const driverIdOf = (token: string) => JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).driverId as string;
+const egpNum = (s: string) => Number(String(s).replace(/[^\d.]/g, ''));
 
 const mgrLogin = () => j('/api/auth/manager/login', { method: 'POST', body: { email: 'manager@demo.eg', password: 'password123' } });
 const drvLogin = (phone = '01000000001', password = '1234') => j('/api/auth/driver/login', { method: 'POST', body: { phone, password } });
@@ -122,4 +123,57 @@ test('driver management: deactivate blocks login, reactivate restores it', async
   const on = await j(`/api/drivers/${sayed}`, { token: mgr, method: 'PATCH', body: { active: true } });
   assert.equal(on.body.active, true);
   assert.equal((await drvLogin('01000000002')).status, 200);
+});
+
+test('settle math: cash-in-hand accrues on delivery, zeroes on settle, re-settle is a no-op', async () => {
+  const mgr = (await mgrLogin()).body.token;
+  const drv = (await drvLogin()).body;
+  const driverId = driverIdOf(drv.token);
+  // Clear any prior unsettled cash to get a known baseline.
+  await j(`/api/drivers/${driverId}/settle`, { token: mgr, method: 'POST' });
+  assert.equal(egpNum((await j('/api/driver/me/summary', { token: drv.token })).body.inHandEGP), 0);
+
+  const o = (await newOrder(mgr, { customerAddress: 'Settle st', totalCashEGP: 175 })).body;
+  const a = await j(`/api/orders/${o.id}/assign`, { token: mgr, method: 'POST', body: { driverId } });
+  await j(`/api/orders/${o.id}/status`, { token: drv.token, method: 'POST', body: { status: 'Delivered', otp: a.body.deliveryOtp } });
+  assert.equal(egpNum((await j('/api/driver/me/summary', { token: drv.token })).body.inHandEGP), 175);
+
+  const s = await j(`/api/drivers/${driverId}/settle`, { token: mgr, method: 'POST' });
+  assert.equal(s.status, 200);
+  assert.ok(s.body.orderCount >= 1);
+  assert.equal(egpNum((await j('/api/driver/me/summary', { token: drv.token })).body.inHandEGP), 0);
+
+  const again = await j(`/api/drivers/${driverId}/settle`, { token: mgr, method: 'POST' });
+  assert.equal(again.body.orderCount, 0);
+});
+
+test('edit order: fields update; a delivered order is frozen', async () => {
+  const mgr = (await mgrLogin()).body.token;
+  const drv = (await drvLogin()).body;
+  const o = (await newOrder(mgr, { customerAddress: 'Old', totalCashEGP: 100 })).body;
+  const e = await j(`/api/orders/${o.id}`, { token: mgr, method: 'PATCH', body: { customerAddress: 'New addr', totalCashEGP: 250 } });
+  assert.equal(e.body.customerAddress, 'New addr');
+  assert.equal(e.body.totalCashToCollect, 25000);
+  const a = await j(`/api/orders/${o.id}/assign`, { token: mgr, method: 'POST', body: { driverId: driverIdOf(drv.token) } });
+  await j(`/api/orders/${o.id}/status`, { token: drv.token, method: 'POST', body: { status: 'Delivered', otp: a.body.deliveryOtp } });
+  const frozen = await j(`/api/orders/${o.id}`, { token: mgr, method: 'PATCH', body: { totalCashEGP: 1 } });
+  assert.equal(frozen.status, 400);
+});
+
+test('shop location: set, reject invalid, clear', async () => {
+  const mgr = (await mgrLogin()).body.token;
+  const set = await j('/api/business', { token: mgr, method: 'PATCH', body: { shopLat: 30.0626, shopLng: 31.2497 } });
+  assert.equal(set.body.shopLat, 30.0626);
+  assert.equal(set.body.shopLng, 31.2497);
+  const bad = await j('/api/business', { token: mgr, method: 'PATCH', body: { shopLat: 999, shopLng: 31 } });
+  assert.equal(bad.status, 400);
+  const cleared = await j('/api/business', { token: mgr, method: 'PATCH', body: { shopLat: null, shopLng: null } });
+  assert.equal(cleared.body.shopLat, null);
+});
+
+test('history date filter: a future range returns nothing', async () => {
+  const mgr = (await mgrLogin()).body.token;
+  const tomorrow = new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
+  const r = (await j(`/api/orders/history?from=${tomorrow}`, { token: mgr })).body;
+  assert.equal(r.total, 0);
 });
