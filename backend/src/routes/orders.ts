@@ -275,6 +275,38 @@ orderRouter.get('/analytics', requireManager, async (req, res) => {
   });
 });
 
+// Daily revenue (delivered COD collected) + deliveries for the last N days,
+// zero-filled so the chart has a continuous series.
+orderRouter.get('/analytics/daily', requireManager, async (req, res) => {
+  const rid = req.auth!.restaurantId;
+  if (!(await gate(res, rid, 'analytics'))) return;
+  const days = Math.min(Math.max(Number(req.query.days) || 14, 1), 90);
+  const since = new Date(); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - (days - 1));
+
+  const orders = await prisma.order.findMany({
+    where: { restaurantId: rid, status: 'Delivered', deliveredAt: { gte: since } },
+    select: { deliveredAt: true, totalCashToCollect: true },
+  });
+
+  const buckets = new Map<string, { deliveries: number; piastres: number }>();
+  for (let i = 0; i < days; i++) {
+    const d = new Date(since); d.setDate(since.getDate() + i);
+    buckets.set(d.toISOString().slice(0, 10), { deliveries: 0, piastres: 0 });
+  }
+  for (const o of orders) {
+    if (!o.deliveredAt) continue;
+    const b = buckets.get(o.deliveredAt.toISOString().slice(0, 10));
+    if (b) { b.deliveries += 1; b.piastres += o.totalCashToCollect; }
+  }
+  const series = [...buckets.entries()].map(([date, v]) => ({
+    date,
+    deliveries: v.deliveries,
+    collectedPiastres: v.piastres,
+    collectedEGP: (v.piastres / 100).toFixed(2),
+  }));
+  res.json({ days, series });
+});
+
 // --- Billing (Fawry-style stub; no real PSP wired) ---
 // Start a checkout: returns a payment reference + amount to pay out-of-band.
 // In production a Fawry webhook would confirm; here /confirm simulates it.

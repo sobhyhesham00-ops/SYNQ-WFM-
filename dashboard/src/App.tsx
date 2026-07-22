@@ -12,6 +12,7 @@ import { Leaderboard } from './Leaderboard';
 import { DailySummary } from './DailySummary';
 import { OrderHistory } from './OrderHistory';
 import { AttentionQueue } from './AttentionQueue';
+import { RevenueChart } from './RevenueChart';
 import { can, type Feature } from './plans';
 import { useLang } from './i18n';
 
@@ -260,6 +261,10 @@ export default function App() {
           : can(plan, 'analytics')
             ? <Analytics token={token} refreshKey={refreshKey} />
             : <button className="locked-card" onClick={() => setShowPlans(true)}>📊 {t('today')} · {t('upgradeToUnlock')} ⭐</button>}
+
+        {drivers.length > 0 && orders.length > 0 && can(plan, 'analytics') && (
+          <div style={{ marginTop: 12 }}><RevenueChart token={token} /></div>
+        )}
 
         {/* Cash drawer per driver */}
         <div className="section-head">
