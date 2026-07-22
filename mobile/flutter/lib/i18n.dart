@@ -41,6 +41,8 @@ const Map<String, Map<String, String>> _dict = {
     'notHome': 'Customer not home',
     'refused': 'Customer refused',
     'wrongAddress': 'Wrong / unreachable address',
+    'newOrder': 'New order · {addr}',
+    'view': 'View',
   },
   'ar': {
     'signIn': 'دخول',
@@ -75,6 +77,8 @@ const Map<String, Map<String, String>> _dict = {
     'notHome': 'العميل مش موجود',
     'refused': 'العميل رفض',
     'wrongAddress': 'العنوان غلط / مش موصول',
+    'newOrder': 'طلب جديد · {addr}',
+    'view': 'افتح',
   },
 };
 
