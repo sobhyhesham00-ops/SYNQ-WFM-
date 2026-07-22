@@ -28,6 +28,14 @@ function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: numb
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
+// Egyptian local number (01xxxxxxxxx) → wa.me international format (201xxxxxxxxx).
+function waPhone(phone: string) {
+  const d = phone.replace(/\D/g, '');
+  if (d.startsWith('20')) return d;
+  if (d.startsWith('0')) return '20' + d.slice(1);
+  return d;
+}
+
 export default function App() {
   const { t, lang, setLang } = useLang();
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('meshwar_token'));
@@ -396,6 +404,20 @@ export default function App() {
                           }}
                         >
                           {can(plan, 'trackLinks') ? '🔗' : '🔒'} {t('shareTracking')}
+                        </button>
+                      )}
+                      {o.customerPhone && (o.status === 'Assigned' || o.status === 'PickedUp') && (
+                        <button
+                          className="link-btn"
+                          onClick={() => {
+                            if (!gated('trackLinks')) return;
+                            const url = `${API_BASE}/t/${o.publicToken}`;
+                            const driver = drivers.find((dr) => dr.id === o.driverId)?.name ?? '';
+                            const msg = t('waMessage', { biz: business?.name ?? '', driver, url });
+                            window.open(`https://wa.me/${waPhone(o.customerPhone!)}?text=${encodeURIComponent(msg)}`, '_blank');
+                          }}
+                        >
+                          📲 {t('waCustomer')}
                         </button>
                       )}
                       {o.status !== 'Delivered' && o.status !== 'Cancelled' && (
