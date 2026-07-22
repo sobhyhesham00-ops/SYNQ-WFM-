@@ -1,0 +1,58 @@
+# Runs the backend integration tests against a real Postgres on every backend change.
+name: Backend tests
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: elkaptin
+          POSTGRES_PASSWORD: elkaptin
+          POSTGRES_DB: elkaptin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U elkaptin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://elkaptin:elkaptin@localhost:5432/elkaptin?schema=public
+      JWT_SECRET: ci-test-secret-32-characters-long
+      NODE_ENV: test
+      PORT: "8080"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma db push --skip-generate
+      - run: npx tsx src/db/seed.ts
+      - name: Start server and run tests
+        env:
+          API_BASE: http://localhost:8080
+        run: |
+          nohup npx tsx src/server.ts > /tmp/server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:8080/health >/dev/null && break || sleep 1; done
+          npm test
+      - name: Server log on failure
+        if: failure()
+        run: cat /tmp/server.log || true
