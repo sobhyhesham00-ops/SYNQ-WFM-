@@ -40,7 +40,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     final uri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$q&travelmode=driving');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open Maps')));
+        SnackBar(content: Text(tr('couldntOpenMaps'))));
     }
   }
 
@@ -53,9 +53,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       if ((next == 'Delivered' || next == 'Failed') && mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (e.toString().contains('wrong_otp')) {
-        setState(() => _otpError = 'الكود غلط · Wrong code');
+        setState(() => _otpError = tr('wrongCode'));
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('actionFailed'))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -85,7 +85,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   Widget build(BuildContext context) {
     final picked = _status == 'PickedUp' || _status == 'Delivered';
     return Scaffold(
-      appBar: AppBar(title: const Text('Active delivery'), backgroundColor: Colors.transparent, elevation: 0),
+      appBar: AppBar(title: Text(tr('activeDelivery')), backgroundColor: Colors.transparent, elevation: 0),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(18),
@@ -97,7 +97,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(gradient: MeshwarColors.brandGradient, borderRadius: BorderRadius.circular(20)),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('COLLECT FROM CUSTOMER',
+                  Text(tr('collectFromCustomer'),
                     style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 12, letterSpacing: .5)),
                   const SizedBox(height: 8),
                   Text('${widget.cashEGP.toStringAsFixed(2)} EGP',
@@ -118,7 +118,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
               OutlinedButton.icon(
                 onPressed: _navigate,
                 icon: const Icon(Icons.navigation),
-                label: const Text('Navigate in Google Maps'),
+                label: Text(tr('navigate')),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   side: const BorderSide(color: MeshwarColors.brand),
@@ -145,7 +145,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: 8),
                   decoration: InputDecoration(
-                    labelText: 'كود الاستلام · Delivery code',
+                    labelText: tr('deliveryCode'),
                     errorText: _otpError,
                     filled: true, fillColor: const Color(0xFFFBFAFF),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -165,7 +165,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                     style: const TextStyle(color: MeshwarColors.danger, fontWeight: FontWeight.w700)),
                 ),
               const SizedBox(height: 8),
-              Center(child: Text('Status: $_status', style: const TextStyle(color: MeshwarColors.muted, fontSize: 12))),
+              Center(child: Text('${tr('status')}: ${trStatus(_status)}', style: const TextStyle(color: MeshwarColors.muted, fontSize: 12))),
             ],
           ),
         ),

@@ -290,7 +290,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-      child: Text(status, style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: 11)),
+      child: Text(trStatus(status), style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: 11)),
     );
   }
 }

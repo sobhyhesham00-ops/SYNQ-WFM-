@@ -43,6 +43,16 @@ const Map<String, Map<String, String>> _dict = {
     'wrongAddress': 'Wrong / unreachable address',
     'newOrder': 'New order · {addr}',
     'view': 'View',
+    'deliveryCode': 'Delivery code',
+    'wrongCode': 'Wrong code',
+    'couldntOpenMaps': "Couldn't open Maps",
+    'actionFailed': 'Something went wrong — try again',
+    'st.Pending': 'Pending',
+    'st.Assigned': 'Assigned',
+    'st.PickedUp': 'Picked up',
+    'st.Delivered': 'Delivered',
+    'st.Failed': 'Failed',
+    'st.Cancelled': 'Cancelled',
   },
   'ar': {
     'signIn': 'دخول',
@@ -79,8 +89,22 @@ const Map<String, Map<String, String>> _dict = {
     'wrongAddress': 'العنوان غلط / مش موصول',
     'newOrder': 'طلب جديد · {addr}',
     'view': 'افتح',
+    'deliveryCode': 'كود الاستلام',
+    'wrongCode': 'الكود غلط',
+    'couldntOpenMaps': 'مش قادر يفتح الخريطة',
+    'actionFailed': 'حصل مشكلة — جرّب تاني',
+    'st.Pending': 'مستني',
+    'st.Assigned': 'اتظبط',
+    'st.PickedUp': 'استلمه',
+    'st.Delivered': 'اتسلّم',
+    'st.Failed': 'فشل',
+    'st.Cancelled': 'اتلغى',
   },
 };
+
+/// Translate an order status enum ('Assigned', 'PickedUp', …) for display.
+/// Falls back to the raw value for any status without a mapping.
+String trStatus(String status) => tr('st.$status') == 'st.$status' ? status : tr('st.$status');
 
 String tr(String key, {Map<String, String>? vars}) {
   var s = _dict[langNotifier.value]?[key] ?? _dict['en']![key] ?? key;
