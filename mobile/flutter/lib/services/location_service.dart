@@ -63,7 +63,14 @@ Future<bool> onIosBackground(ServiceInstance service) async => true;
 
 @pragma('vm:entry-point')
 void onServiceStart(ServiceInstance service) async {
-  final token = await _readToken(); // JWT saved at login
+  final token = await _readToken(); // JWT saved at login (also inits the plugins)
+
+  // This runs in a SEPARATE background isolate, which has its own Hive state —
+  // the box opened in initBackgroundTracking (main isolate) isn't visible here.
+  // Open it locally (guarded so it works whether or not this shares an isolate).
+  await Hive.initFlutter();
+  final box = Hive.isBoxOpen('loc_queue') ? Hive.box('loc_queue') : await Hive.openBox('loc_queue');
+
   final List<Map<String, dynamic>> buffer = [];
   WebSocketChannel? channel;
   bool connected = false; // only true while the socket is actually open
@@ -116,7 +123,6 @@ void onServiceStart(ServiceInstance service) async {
     if (flushing) return;
     flushing = true;
     try {
-      final box = Hive.box('loc_queue');
       final queued = box.values.cast<String>().toList();
 
       // Snapshot + clear the live buffer up front so fixes arriving during the
