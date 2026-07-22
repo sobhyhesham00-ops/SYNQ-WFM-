@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { api } from './api';
 import { useLang } from './i18n';
 
-export function Onboarding({ token, hasDriver, hasOrder, onChange }: {
-  token: string; hasDriver: boolean; hasOrder: boolean; onChange: () => void;
+export function Onboarding({ token, hasDriver, hasOrder, hasLocation, onOpenSettings, onChange }: {
+  token: string; hasDriver: boolean; hasOrder: boolean; hasLocation: boolean;
+  onOpenSettings: () => void; onChange: () => void;
 }) {
   const { t } = useLang();
   const [open, setOpen] = useState(!hasDriver);
@@ -47,6 +48,12 @@ export function Onboarding({ token, hasDriver, hasOrder, onChange }: {
       <div className={`onboard-step ${hasOrder ? 'ok' : ''}`}>
         <span className="onboard-check">{hasOrder ? '✓' : '2'}</span>
         <span className="grow">{t('step2Order')}</span>
+      </div>
+
+      <div className={`onboard-step ${hasLocation ? 'ok' : ''}`}>
+        <span className="onboard-check">{hasLocation ? '✓' : '3'}</span>
+        <span className="grow">{t('step3Location')}</span>
+        {!hasLocation && <button className="ghost-pill" onClick={onOpenSettings}>{t('setLocation')}</button>}
       </div>
     </div>
   );

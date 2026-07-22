@@ -272,7 +272,9 @@ export default function App() {
 
         {/* Onboarding checklist for a fresh business, else today's analytics */}
         {(drivers.length === 0 || orders.length === 0)
-          ? <Onboarding token={token} hasDriver={drivers.length > 0} hasOrder={orders.length > 0} onChange={refresh} />
+          ? <Onboarding token={token} hasDriver={drivers.length > 0} hasOrder={orders.length > 0}
+              hasLocation={business?.shopLat != null && business?.shopLng != null}
+              onOpenSettings={() => setShowSettings(true)} onChange={refresh} />
           : can(plan, 'analytics')
             ? <Analytics token={token} refreshKey={refreshKey} />
             : <button className="locked-card" onClick={() => setShowPlans(true)}>📊 {t('today')} · {t('upgradeToUnlock')} ⭐</button>}
