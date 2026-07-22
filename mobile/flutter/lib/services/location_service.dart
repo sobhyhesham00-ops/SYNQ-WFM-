@@ -66,9 +66,23 @@ void onServiceStart(ServiceInstance service) async {
   final token = await _readToken(); // JWT saved at login
   final List<Map<String, dynamic>> buffer = [];
   WebSocketChannel? channel;
+  bool connected = false; // only true while the socket is actually open
+  bool flushing = false;  // guards against a slow flush overlapping the next tick
 
   void connect() {
-    channel = WebSocketChannel.connect(Uri.parse('$_wsBase/ws/driver?token=$token'));
+    final ch = WebSocketChannel.connect(Uri.parse('$_wsBase/ws/driver?token=$token'));
+    channel = ch;
+    connected = false;
+    // `ready` completes when the handshake succeeds; errors if it can't connect.
+    ch.ready.then((_) => connected = true).catchError((_) => connected = false);
+    // A dropped/closed socket flips us back to offline so the next flush
+    // persists fixes to Hive instead of firing them into a dead sink.
+    ch.stream.listen(
+      (_) {},
+      onError: (_) => connected = false,
+      onDone: () => connected = false,
+      cancelOnError: true,
+    );
   }
   connect();
 
@@ -95,31 +109,49 @@ void onServiceStart(ServiceInstance service) async {
     });
   });
 
-  // 2) Flush one batched frame every _flushSeconds.
+  // 2) Flush one batched frame every _flushSeconds. Fixes are NEVER dropped:
+  //    on any failure (offline, dropped socket, send error) the batch is
+  //    persisted to Hive and we reconnect for the next tick.
   final flushTimer = Timer.periodic(const Duration(seconds: _flushSeconds), (_) async {
-    // Drain any previously-queued fixes (from an offline period) first.
-    final box = Hive.box('loc_queue');
-    final queued = box.values.cast<String>().toList();
-
-    if (buffer.isEmpty && queued.isEmpty) return;
-
-    final samples = [
-      ...queued.map((s) => jsonDecode(s) as Map<String, dynamic>),
-      ...buffer,
-    ];
-    final frame = jsonEncode({'type': 'locations', 'samples': samples});
-
+    if (flushing) return;
+    flushing = true;
     try {
-      channel!.sink.add(frame);
+      final box = Hive.box('loc_queue');
+      final queued = box.values.cast<String>().toList();
+
+      // Snapshot + clear the live buffer up front so fixes arriving during the
+      // awaits below are neither lost nor sent twice.
+      final pending = List<Map<String, dynamic>>.from(buffer);
       buffer.clear();
-      await box.clear(); // sent successfully, drop the queue
-    } catch (_) {
-      // Offline: persist this batch and reconnect for next tick.
-      for (final s in buffer) {
-        await box.add(jsonEncode(s));
+
+      if (pending.isEmpty && queued.isEmpty) return;
+
+      // Socket not open? Persist this batch and try to reconnect next tick —
+      // sink.add on a dead socket fails silently, so we must not clear on it.
+      if (!connected || channel == null) {
+        for (final s in pending) {
+          await box.add(jsonEncode(s));
+        }
+        connect();
+        return;
       }
-      buffer.clear();
-      connect();
+
+      final samples = [
+        ...queued.map((s) => jsonDecode(s) as Map<String, dynamic>),
+        ...pending,
+      ];
+      try {
+        channel!.sink.add(jsonEncode({'type': 'locations', 'samples': samples}));
+        await box.clear(); // handed to the socket — drop the offline queue
+      } catch (_) {
+        connected = false;
+        for (final s in pending) {
+          await box.add(jsonEncode(s));
+        }
+        connect();
+      }
+    } finally {
+      flushing = false;
     }
   });
 
