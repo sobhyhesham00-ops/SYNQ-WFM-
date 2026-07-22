@@ -88,8 +88,10 @@ export const api = {
       body: JSON.stringify(body),
     }).then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json().catch(() => ({}))).error || 'signup failed')))).then(storeRefresh),
 
-  updateBusiness: (token: string, patch: { ramadanMode?: boolean; iftarTime?: string | null; plan?: PlanTier }) =>
-    req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),
+  updateBusiness: (token: string, patch: {
+    ramadanMode?: boolean; iftarTime?: string | null; plan?: PlanTier;
+    shopLat?: number | null; shopLng?: number | null;
+  }) => req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),
 
   checkout: (token: string, plan: PlanTier, method: 'fawry' | 'vodafone' | 'instapay', cycle: 'monthly' | 'annual'): Promise<{
     plan: PlanTier; method?: string; cycle?: string; reference?: string; amountEGP?: string; payTo?: string | null;

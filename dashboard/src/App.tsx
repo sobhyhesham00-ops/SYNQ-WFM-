@@ -13,6 +13,7 @@ import { DailySummary } from './DailySummary';
 import { OrderHistory } from './OrderHistory';
 import { AttentionQueue } from './AttentionQueue';
 import { RevenueChart } from './RevenueChart';
+import { Settings } from './Settings';
 import { can, type Feature } from './plans';
 import { useLang } from './i18n';
 
@@ -44,6 +45,7 @@ export default function App() {
   const [showSummary, setShowSummary] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showAttention, setShowAttention] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [attentionCount, setAttentionCount] = useState(0);
   const [toasts, setToasts] = useState<{ id: number; kind: 'error' | 'warn' | 'info' | 'ok'; text: string }[]>([]);
   const pushToast = (kind: 'error' | 'warn' | 'info' | 'ok', text: string) => {
@@ -205,6 +207,10 @@ export default function App() {
       {showSummary && <DailySummary token={token!} onClose={() => setShowSummary(false)} />}
       {showHistory && <OrderHistory token={token!} drivers={drivers} onClose={() => setShowHistory(false)} />}
       {showAttention && <AttentionQueue token={token!} drivers={drivers} onClose={() => setShowAttention(false)} />}
+      {showSettings && business && (
+        <Settings token={token!} business={business} onClose={() => setShowSettings(false)}
+          onSaved={(b) => setBusiness((prev) => (prev ? { ...prev, ...b } : prev))} />
+      )}
       <div className="map-pane">
         <LiveMap drivers={drivers} livePins={pins} route={route} />
         {replayDriver && (
@@ -235,6 +241,7 @@ export default function App() {
             <button className="ghost-btn" title={t('dailySummary')} onClick={() => setShowSummary(true)}>📋</button>
             <button className="ghost-btn" title={t('leaderboard')} onClick={() => { if (gated('analytics')) setShowBoard(true); }}>🏆</button>
             <button className={`ghost-btn ${business?.ramadanMode ? 'moon-on' : ''}`} title="Ramadan mode" onClick={toggleRamadan}>🌙</button>
+            <button className="ghost-btn" title={t('settings')} onClick={() => setShowSettings(true)}>⚙️</button>
             <button className="ghost-btn" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}>
               {lang === 'ar' ? 'EN' : 'ع'}
             </button>

@@ -369,18 +369,31 @@ orderRouter.get('/billing/history', requireManager, async (req, res) => {
 
 // Update business settings (Ramadan mode + iftar time + subscription plan).
 orderRouter.patch('/business', requireManager, async (req, res) => {
-  const { ramadanMode, iftarTime, plan } = req.body;
+  const { ramadanMode, iftarTime, plan, shopLat, shopLng } = req.body;
   const PLANS = ['Free', 'Starter', 'Growth', 'Chain'];
   // Enabling Ramadan mode requires the plan that includes it.
   if (ramadanMode === true && !(await gate(res, req.auth!.restaurantId, 'ramadan'))) return;
-  const data: { ramadanMode?: boolean; iftarTime?: string | null; plan?: string } = {};
+  const data: {
+    ramadanMode?: boolean; iftarTime?: string | null; plan?: string;
+    shopLat?: number | null; shopLng?: number | null;
+  } = {};
   if (typeof ramadanMode === 'boolean') data.ramadanMode = ramadanMode;
   if (iftarTime !== undefined) data.iftarTime = iftarTime || null;
   if (PLANS.includes(plan)) data.plan = plan;
+  // Shop location (used to rank drivers by proximity). Both null = clear.
+  if (shopLat === null && shopLng === null) {
+    data.shopLat = null; data.shopLng = null;
+  } else if (shopLat !== undefined || shopLng !== undefined) {
+    const lat = Number(shopLat), lng = Number(shopLng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ error: 'invalid coordinates' });
+    }
+    data.shopLat = lat; data.shopLng = lng;
+  }
   const biz = await prisma.restaurant.update({
     where: { id: req.auth!.restaurantId },
     data: data as never,
-    select: { name: true, businessType: true, plan: true, ramadanMode: true, iftarTime: true },
+    select: { name: true, businessType: true, plan: true, ramadanMode: true, iftarTime: true, shopLat: true, shopLng: true },
   });
   res.json(biz);
 });
