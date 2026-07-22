@@ -369,17 +369,22 @@ orderRouter.get('/billing/history', requireManager, async (req, res) => {
 
 // Update business settings (Ramadan mode + iftar time + subscription plan).
 orderRouter.patch('/business', requireManager, async (req, res) => {
-  const { ramadanMode, iftarTime, plan, shopLat, shopLng } = req.body;
+  const { ramadanMode, iftarTime, plan, shopLat, shopLng, name, phone } = req.body;
   const PLANS = ['Free', 'Starter', 'Growth', 'Chain'];
   // Enabling Ramadan mode requires the plan that includes it.
   if (ramadanMode === true && !(await gate(res, req.auth!.restaurantId, 'ramadan'))) return;
   const data: {
     ramadanMode?: boolean; iftarTime?: string | null; plan?: string;
-    shopLat?: number | null; shopLng?: number | null;
+    shopLat?: number | null; shopLng?: number | null; name?: string; phone?: string | null;
   } = {};
   if (typeof ramadanMode === 'boolean') data.ramadanMode = ramadanMode;
   if (iftarTime !== undefined) data.iftarTime = iftarTime || null;
   if (PLANS.includes(plan)) data.plan = plan;
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'business name cannot be empty' });
+    data.name = name.trim();
+  }
+  if (phone !== undefined) data.phone = phone || null;
   // Shop location (used to rank drivers by proximity). Both null = clear.
   if (shopLat === null && shopLng === null) {
     data.shopLat = null; data.shopLng = null;
@@ -393,7 +398,7 @@ orderRouter.patch('/business', requireManager, async (req, res) => {
   const biz = await prisma.restaurant.update({
     where: { id: req.auth!.restaurantId },
     data: data as never,
-    select: { name: true, businessType: true, plan: true, ramadanMode: true, iftarTime: true, shopLat: true, shopLng: true },
+    select: { name: true, phone: true, businessType: true, plan: true, ramadanMode: true, iftarTime: true, shopLat: true, shopLng: true },
   });
   res.json(biz);
 });
@@ -422,7 +427,7 @@ orderRouter.get('/state', requireManager, async (req, res) => {
   const [business, drivers, orders] = await Promise.all([
     prisma.restaurant.findUnique({
       where: { id: rid },
-      select: { name: true, businessType: true, plan: true, ramadanMode: true, iftarTime: true, shopLat: true, shopLng: true },
+      select: { name: true, phone: true, businessType: true, plan: true, ramadanMode: true, iftarTime: true, shopLat: true, shopLng: true },
     }),
     prisma.driver.findMany({
       where: { restaurantId: rid },

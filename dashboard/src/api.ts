@@ -13,7 +13,7 @@ export const BUSINESS_TYPES: BusinessType[] =
   ['Restaurant', 'Takeaway', 'Pharmacy', 'Grocery', 'Minimarket', 'Kiosk', 'Other'];
 export type PlanTier = 'Free' | 'Starter' | 'Growth' | 'Chain';
 export interface Business {
-  name: string; businessType: BusinessType; plan?: PlanTier;
+  name: string; phone?: string | null; businessType: BusinessType; plan?: PlanTier;
   ramadanMode?: boolean; iftarTime?: string | null;
   shopLat?: number | null; shopLng?: number | null;
 }
@@ -90,7 +90,7 @@ export const api = {
 
   updateBusiness: (token: string, patch: {
     ramadanMode?: boolean; iftarTime?: string | null; plan?: PlanTier;
-    shopLat?: number | null; shopLng?: number | null;
+    shopLat?: number | null; shopLng?: number | null; name?: string; phone?: string | null;
   }) => req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),
 
   checkout: (token: string, plan: PlanTier, method: 'fawry' | 'vodafone' | 'instapay', cycle: 'monthly' | 'annual'): Promise<{

@@ -177,3 +177,12 @@ test('history date filter: a future range returns nothing', async () => {
   const r = (await j(`/api/orders/history?from=${tomorrow}`, { token: mgr })).body;
   assert.equal(r.total, 0);
 });
+
+test('business profile: name/phone update; empty name rejected', async () => {
+  const mgr = (await mgrLogin()).body.token;
+  const upd = await j('/api/business', { token: mgr, method: 'PATCH', body: { name: 'Koshary El Tahrir 2', phone: '0223900001' } });
+  assert.equal(upd.body.name, 'Koshary El Tahrir 2');
+  assert.equal(upd.body.phone, '0223900001');
+  const bad = await j('/api/business', { token: mgr, method: 'PATCH', body: { name: '   ' } });
+  assert.equal(bad.status, 400);
+});
