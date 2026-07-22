@@ -186,3 +186,67 @@ test('business profile: name/phone update; empty name rejected', async () => {
   const bad = await j('/api/business', { token: mgr, method: 'PATCH', body: { name: '   ' } });
   assert.equal(bad.status, 400);
 });
+
+// Look up an order's public tracking token (the opaque share link id).
+async function publicTokenOf(mgr: string, orderId: string) {
+  const orders = (await j('/api/state', { token: mgr })).body.orders as { id: string; publicToken: string }[];
+  return orders.find((o) => o.id === orderId)!.publicToken;
+}
+
+test('public tracking: hides driver + code until in-flight, reveals once assigned', async () => {
+  const mgr = (await mgrLogin()).body.token;
+  const driverId = driverIdOf((await drvLogin()).body.token);
+  const o = (await newOrder(mgr, { customerAddress: 'Track st', totalCashEGP: 130 })).body;
+  const tok = await publicTokenOf(mgr, o.id);
+
+  // Pending: no login needed, but the driver position + handover code are withheld.
+  const pending = await j(`/api/track/${tok}`);
+  assert.equal(pending.status, 200);
+  assert.equal(pending.body.status, 'Pending');
+  assert.equal(pending.body.cashToPayEGP, '130.00');
+  assert.ok(pending.body.businessName);
+  assert.equal(pending.body.driver, null);
+  assert.equal(pending.body.deliveryCode, null);
+
+  // Assigned (in-flight): the customer now sees the driver + a 4-digit code.
+  await j(`/api/orders/${o.id}/assign`, { token: mgr, method: 'POST', body: { driverId } });
+  const live = await j(`/api/track/${tok}`);
+  assert.equal(live.body.status, 'Assigned');
+  assert.ok(live.body.driver && typeof live.body.driver.name === 'string');
+  assert.match(live.body.deliveryCode, /^\d{4}$/);
+
+  // A bogus token is a clean 404, never a leak.
+  const missing = await j('/api/track/nope-not-a-token');
+  assert.equal(missing.status, 404);
+});
+
+test('public rating: only after delivery, 1-5, and only once', async () => {
+  const mgr = (await mgrLogin()).body.token;
+  const drv = (await drvLogin()).body;
+  const driverId = driverIdOf(drv.token);
+  const o = (await newOrder(mgr, { customerAddress: 'Rate st', totalCashEGP: 70 })).body;
+  const tok = await publicTokenOf(mgr, o.id);
+
+  // Can't rate before it's delivered.
+  const early = await j(`/api/track/${tok}/rate`, { method: 'POST', body: { rating: 5 } });
+  assert.equal(early.status, 400);
+
+  const a = await j(`/api/orders/${o.id}/assign`, { token: mgr, method: 'POST', body: { driverId } });
+  await j(`/api/orders/${o.id}/status`, { token: drv.token, method: 'POST', body: { status: 'Delivered', otp: a.body.deliveryOtp } });
+
+  // Out-of-range rating rejected.
+  const bad = await j(`/api/track/${tok}/rate`, { method: 'POST', body: { rating: 6 } });
+  assert.equal(bad.status, 400);
+
+  // A valid rating sticks; the code is hidden once delivered.
+  const ok = await j(`/api/track/${tok}/rate`, { method: 'POST', body: { rating: 5 } });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.rating, 5);
+  const afterDeliver = await j(`/api/track/${tok}`);
+  assert.equal(afterDeliver.body.deliveryCode, null);
+  assert.equal(afterDeliver.body.rating, 5);
+
+  // One-time only.
+  const again = await j(`/api/track/${tok}/rate`, { method: 'POST', body: { rating: 4 } });
+  assert.equal(again.status, 409);
+});
