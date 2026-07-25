@@ -61,6 +61,11 @@ const Map<String, Map<String, String>> _dict = {
     'useDefault': 'Reset to default',
     'serverSaved': 'Server saved',
     'usingDefault': 'Using the built-in server',
+    'locDiscTitle': 'Location while on shift',
+    'locDiscBody': 'El Kaptin collects your location — including in the background, when the app is closed or the screen is locked — so your shop can see your live position during deliveries. This happens only while you are on shift and stops when you end your shift. Your location is shared only with your shop.',
+    'privacyPolicy': 'Privacy policy',
+    'continueBtn': 'Continue',
+    'notNow': 'Not now',
   },
   'ar': {
     'signIn': 'دخول',
@@ -115,6 +120,11 @@ const Map<String, Map<String, String>> _dict = {
     'useDefault': 'رجّع الافتراضي',
     'serverSaved': 'اتحفظ السيرفر',
     'usingDefault': 'شغّال على السيرفر الافتراضي',
+    'locDiscTitle': 'الموقع أثناء الوردية',
+    'locDiscBody': 'الكابتن بيجمع موقعك — حتى في الخلفية، لما التطبيق يكون مقفول أو الشاشة مطفية — عشان المحل بتاعك يشوف موقعك مباشر أثناء التوصيل. ده بيحصل وإنت في الوردية بس وبيقف لما تنهي الوردية. موقعك بيتشارك مع المحل بتاعك بس.',
+    'privacyPolicy': 'سياسة الخصوصية',
+    'continueBtn': 'كمّل',
+    'notNow': 'مش دلوقتي',
   },
 };
 

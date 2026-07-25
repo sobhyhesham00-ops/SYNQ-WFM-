@@ -4,9 +4,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
 import '../services/location_service.dart';
 import '../services/api_client.dart';
+import '../services/server_config.dart';
 import '../i18n.dart';
 import 'delivery_screen.dart';
 import 'earnings_screen.dart';
@@ -113,9 +115,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       .where((o) => o.status == 'Delivered')
       .fold(0.0, (s, o) => s + (double.tryParse(o.cashEGP) ?? 0));
 
+  // Google Play requires a prominent, in-app disclosure BEFORE requesting
+  // background location — naming the data, the background use, and the purpose,
+  // with an affirmative action to proceed. Shown once each time a shift starts.
+  Future<bool> _showLocationDisclosure() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr('locDiscTitle')),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(tr('locDiscBody'), style: const TextStyle(fontSize: 14, height: 1.5)),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () => launchUrl(Uri.parse('${ServerConfig.apiBase}/privacy'),
+                  mode: LaunchMode.externalApplication),
+              icon: const Icon(Icons.open_in_new, size: 16, color: MeshwarColors.brand),
+              label: Text(tr('privacyPolicy'), style: const TextStyle(color: MeshwarColors.brand)),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(tr('notNow'))),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(tr('continueBtn'))),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
   /// Returns true only if we have at least foreground location — without it the
   /// shift would "start" but report nothing, the worst silent failure.
   Future<bool> _ensurePermissions() async {
+    // Prominent disclosure must precede the permission request (Play policy).
+    if (!await _showLocationDisclosure()) return false;
     final status = await Permission.locationWhenInUse.request();
     if (!status.isGranted) return false;
     // Background ("Allow all the time") keeps tracking alive with the screen
