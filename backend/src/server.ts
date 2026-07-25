@@ -54,6 +54,10 @@ app.get('/api/cash-drawer', requireManager, async (req, res) => {
 const publicDir = path.join(__dirname, '..', 'public');
 app.use(express.static(publicDir));
 app.get('/t/:token', (_req, res) => res.sendFile(path.join(publicDir, 'track.html')));
+// Legal pages (bilingual) — the public URLs the app stores link to, and the
+// Play Store listing requires. Clean paths in addition to the static .html.
+app.get('/privacy', (_req, res) => res.sendFile(path.join(publicDir, 'privacy.html')));
+app.get('/terms', (_req, res) => res.sendFile(path.join(publicDir, 'terms.html')));
 
 // Global error handler — must be last, and must keep all four args so Express
 // recognises it. On a flaky free-tier DB a Prisma throw lands here as a clean
