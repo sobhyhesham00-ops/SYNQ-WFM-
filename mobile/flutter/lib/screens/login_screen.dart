@@ -1,5 +1,6 @@
 // Driver login — phone + PIN, themed to match the dashboard.
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
 import '../i18n.dart';
 import '../services/api_client.dart';
@@ -133,6 +134,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: MeshwarColors.muted, fontSize: 12),
                   ),
+                ),
+                TextButton(
+                  onPressed: () => launchUrl(Uri.parse('${ServerConfig.apiBase}/privacy'),
+                      mode: LaunchMode.externalApplication),
+                  child: Text(tr('privacyPolicy'),
+                      style: const TextStyle(color: MeshwarColors.muted, fontSize: 12)),
                 ),
               ],
             ),
