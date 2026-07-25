@@ -14,6 +14,7 @@ import { orderRouter } from './routes/orders';
 import { authRouter } from './routes/auth';
 import { publicRouter } from './routes/public';
 import { driverRouter } from './routes/driver';
+import { accountRouter } from './routes/account';
 import { getRestaurantCashDrawers } from './services/cashDrawer';
 import { requireManager } from './services/auth';
 import { securityHeaders } from './security';
@@ -44,6 +45,7 @@ app.use('/api', authRouter);
 app.use('/api', orderRouter);
 app.use('/api', driverRouter);
 app.use('/api', publicRouter);
+app.use('/api', accountRouter);
 
 // End-of-day cash drawer for the whole restaurant.
 app.get('/api/cash-drawer', requireManager, async (req, res) => {
@@ -57,6 +59,7 @@ app.get('/t/:token', (_req, res) => res.sendFile(path.join(publicDir, 'track.htm
 // Legal pages (bilingual) — the public URLs the app stores link to, and the
 // Play Store listing requires. Clean paths in addition to the static .html.
 app.get('/privacy', (_req, res) => res.sendFile(path.join(publicDir, 'privacy.html')));
+app.get('/delete-account', (_req, res) => res.sendFile(path.join(publicDir, 'delete-account.html')));
 app.get('/terms', (_req, res) => res.sendFile(path.join(publicDir, 'terms.html')));
 
 // Global error handler — must be last, and must keep all four args so Express

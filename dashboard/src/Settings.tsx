@@ -61,11 +61,57 @@ function ProfileCard({ token, business, onSaved }: {
   );
 }
 
-export function Settings({ token, business, onClose, onSaved }: {
+function DangerZone({ token, onDeleted }: { token: string; onDeleted: () => void }) {
+  const { t } = useLang();
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function del() {
+    if (!password || busy) return;
+    setBusy(true); setError('');
+    try {
+      await api.deleteBusiness(token, password);
+      onDeleted();
+    } catch {
+      setError(t('wrongPassword'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 12, borderColor: 'var(--danger)' }}>
+      <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--danger)' }}>⚠️ {t('dangerZone')}</div>
+      <div className="subtle" style={{ fontSize: 12, margin: '2px 0 10px' }}>{t('deleteBusinessHint')}</div>
+      {!open ? (
+        <button className="link-btn" style={{ color: 'var(--danger)' }} onClick={() => setOpen(true)}>
+          {t('deleteBusiness')}
+        </button>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontWeight: 600 }}>{t('deleteConfirmTitle')}</div>
+          <input className="mini-input" type="password" autoFocus placeholder={t('deleteConfirmPassword')}
+            value={password} onChange={(e) => setPassword(e.target.value)} />
+          <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+            <button className="pill-btn" style={{ background: 'var(--danger)' }}
+              disabled={busy || !password} onClick={del}>{t('deleteForever')}</button>
+            <button className="link-btn" onClick={() => { setOpen(false); setPassword(''); setError(''); }}>{t('cancel')}</button>
+          </div>
+          {error && <div className="err">{error}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function Settings({ token, business, onClose, onSaved, onDeleted }: {
   token: string;
   business: Business;
   onClose: () => void;
   onSaved: (b: Partial<Business>) => void;
+  onDeleted: () => void;
 }) {
   const { t } = useLang();
   const [busy, setBusy] = useState(false);
@@ -121,6 +167,8 @@ export function Settings({ token, business, onClose, onSaved }: {
           </div>
           {error && <div className="err" style={{ marginTop: 10 }}>{error}</div>}
         </div>
+
+        <DangerZone token={token} onDeleted={onDeleted} />
       </div>
     </div>
   );

@@ -93,6 +93,11 @@ export const api = {
     shopLat?: number | null; shopLng?: number | null; name?: string; phone?: string | null;
   }) => req('/api/business', token, { method: 'PATCH', body: JSON.stringify(patch) }),
 
+  // Irreversibly delete the whole business (drivers, orders, logs, staff).
+  // Re-authenticates with the manager's password server-side.
+  deleteBusiness: (token: string, password: string): Promise<{ deleted: boolean }> =>
+    req('/api/business/account', token, { method: 'DELETE', body: JSON.stringify({ password }) }),
+
   checkout: (token: string, plan: PlanTier, method: 'fawry' | 'vodafone' | 'instapay', cycle: 'monthly' | 'annual'): Promise<{
     plan: PlanTier; method?: string; cycle?: string; reference?: string; amountEGP?: string; payTo?: string | null;
     free?: boolean; contactSales?: boolean;
