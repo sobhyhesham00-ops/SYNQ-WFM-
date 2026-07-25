@@ -50,6 +50,12 @@ port, so flip 8080 to public:
 > The APK is debug-signed — perfect for sideloading a pilot. (A real keystore
 > is only needed for a Play Store upload.)
 
+> **Build once, re-point anytime.** The app can also take the backend URL at
+> runtime: on the login screen tap the small **server** line at the bottom and
+> paste the `https://…` URL. So when the Codespace URL changes (a new session),
+> you don't have to rebuild — just update it on the phone. The values you pass
+> to the workflow above are simply the default it starts with.
+
 ## 4 · Install it on the phone
 
 1. Send `app-release.apk` to the phone (email/Drive/USB) and tap it.
@@ -87,7 +93,7 @@ port, so flip 8080 to public:
 
 | Symptom | Fix |
 |---|---|
-| Phone can't log in / "network" error | Port 8080 isn't **Public** (step 2), or the APK was built with the wrong URL (rebuild step 3). |
+| Phone can't log in / "network" error | Port 8080 isn't **Public** (step 2); or the backend URL is wrong — tap **server** on the login screen and paste the current `https://…` URL (no rebuild needed). |
 | Driver dot never moves | Location permission isn't **Allow all the time**; or battery optimization is killing it — the app asks to disable it, say yes. |
 | Map is blank grey | Tiles are blocked/slow on the network; the UI still works. Try Wi-Fi. |
 | New order doesn't show | Wait 25s (auto-refresh) or pull to refresh; confirm it was **assigned** to *this* driver. |

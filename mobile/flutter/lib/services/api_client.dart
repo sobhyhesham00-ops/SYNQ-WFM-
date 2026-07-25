@@ -1,9 +1,7 @@
 // REST client for the driver app. Talks to the Meshwar backend.
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
-// Base URL from --dart-define=API_BASE=… (defaults to prod).
-const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'https://api.meshwar.app');
+import 'server_config.dart';
 
 /// A single active/recent order for the driver's list.
 class DriverOrder {
@@ -32,7 +30,7 @@ class DriverOrder {
 
 /// Driver-scoped API. Construct with the JWT from login.
 class DriverApi {
-  DriverApi(this.token, {this.baseUrl = apiBase});
+  DriverApi(this.token, {String? baseUrl}) : baseUrl = baseUrl ?? ServerConfig.apiBase;
   final String token;
   final String baseUrl;
 
@@ -43,9 +41,10 @@ class DriverApi {
 
   /// Phone + PIN login. Returns {token, name}. Static — no token yet.
   static Future<Map<String, dynamic>> login(String phone, String password,
-      {String baseUrl = apiBase}) async {
+      {String? baseUrl}) async {
+    final base = baseUrl ?? ServerConfig.apiBase;
     final res = await http.post(
-      Uri.parse('$baseUrl/api/auth/driver/login'),
+      Uri.parse('$base/api/auth/driver/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'phone': phone, 'password': password}),
     );
