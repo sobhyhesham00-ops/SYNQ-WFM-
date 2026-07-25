@@ -221,7 +221,8 @@ export default function App() {
       {showAttention && <AttentionQueue token={token!} drivers={drivers} onClose={() => setShowAttention(false)} />}
       {showSettings && business && (
         <Settings token={token!} business={business} onClose={() => setShowSettings(false)}
-          onSaved={(b) => setBusiness((prev) => (prev ? { ...prev, ...b } : prev))} />
+          onSaved={(b) => setBusiness((prev) => (prev ? { ...prev, ...b } : prev))}
+          onDeleted={() => { setShowSettings(false); logout(); }} />
       )}
       <div className="map-pane">
         <LiveMap drivers={drivers} livePins={pins} route={route} />
