@@ -4,11 +4,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'theme.dart';
 import 'i18n.dart';
 import 'services/location_service.dart';
+import 'services/server_config.dart';
 import 'screens/login_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initBackgroundTracking();
+  await initBackgroundTracking(); // also inits Hive
+  await ServerConfig.init();       // load any saved backend URL override
   runApp(const MeshwarApp());
 }
 

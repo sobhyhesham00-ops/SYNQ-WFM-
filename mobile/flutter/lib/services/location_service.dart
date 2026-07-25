@@ -23,10 +23,10 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/widgets.dart';
 import 'auth_store.dart';
+import 'server_config.dart';
 
 const _flushSeconds = 20; // send one frame every 20s
 const _minMovementMeters = 40; // ignore jitter smaller than this
-const _wsBase = String.fromEnvironment('WS_BASE', defaultValue: 'wss://api.meshwar.app');
 
 /// Called once at app startup to register the background service.
 Future<void> initBackgroundTracking() async {
@@ -71,13 +71,18 @@ void onServiceStart(ServiceInstance service) async {
   await Hive.initFlutter();
   final box = Hive.isBoxOpen('loc_queue') ? Hive.box('loc_queue') : await Hive.openBox('loc_queue');
 
+  // Resolve the backend WS URL the driver configured (or the build-time default)
+  // from the shared config box — same source the UI isolate's REST client uses.
+  final configBox = Hive.isBoxOpen(configBoxName) ? Hive.box(configBoxName) : await Hive.openBox(configBoxName);
+  final wsBase = ServerConfig.wsBaseFromBox(configBox);
+
   final List<Map<String, dynamic>> buffer = [];
   WebSocketChannel? channel;
   bool connected = false; // only true while the socket is actually open
   bool flushing = false;  // guards against a slow flush overlapping the next tick
 
   void connect() {
-    final ch = WebSocketChannel.connect(Uri.parse('$_wsBase/ws/driver?token=$token'));
+    final ch = WebSocketChannel.connect(Uri.parse('$wsBase/ws/driver?token=$token'));
     channel = ch;
     connected = false;
     // `ready` completes when the handshake succeeds; errors if it can't connect.

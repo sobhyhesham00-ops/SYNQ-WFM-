@@ -4,6 +4,7 @@ import '../theme.dart';
 import '../i18n.dart';
 import '../services/api_client.dart';
 import '../services/auth_store.dart';
+import '../services/server_config.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -33,6 +34,47 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) setState(() => _error = tr('invalidCreds'));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // Let the driver point the app at a backend URL (e.g. a Codespace link), so
+  // one installed APK works anywhere without a rebuild.
+  Future<void> _editServer() async {
+    final ctrl = TextEditingController(text: ServerConfig.isCustom ? ServerConfig.apiBase : '');
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr('serverSettings')),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(tr('serverHint'), style: const TextStyle(color: MeshwarColors.muted, fontSize: 13)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: ctrl,
+            keyboardType: TextInputType.url,
+            autocorrect: false,
+            decoration: InputDecoration(
+              hintText: ServerConfig.defaultApiBase,
+              labelText: tr('serverUrl'),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ]),
+        actions: [
+          TextButton(
+            onPressed: () async { await ServerConfig.save(''); if (ctx.mounted) Navigator.of(ctx).pop(true); },
+            child: Text(tr('useDefault')),
+          ),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(tr('cancel'))),
+          FilledButton(
+            onPressed: () async { await ServerConfig.save(ctrl.text); if (ctx.mounted) Navigator.of(ctx).pop(true); },
+            child: Text(tr('save')),
+          ),
+        ],
+      ),
+    );
+    if (saved == true && mounted) {
+      setState(() {}); // refresh the little status line
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('serverSaved'))));
     }
   }
 
@@ -81,6 +123,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: _loading
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : Text(tr('signIn')),
+                ),
+                const SizedBox(height: 6),
+                TextButton.icon(
+                  onPressed: _editServer,
+                  icon: const Icon(Icons.dns_outlined, size: 16, color: MeshwarColors.muted),
+                  label: Text(
+                    ServerConfig.isCustom ? ServerConfig.apiBase : tr('usingDefault'),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: MeshwarColors.muted, fontSize: 12),
+                  ),
                 ),
               ],
             ),
