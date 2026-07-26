@@ -95,4 +95,25 @@ test.describe('authenticated dashboard', () => {
 
     await expect(page.getByText('Add your first driver')).toBeVisible();
   });
+
+  test('no offline banner while the server is reachable', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText('CASH TO COLLECT FROM FLEET')).toBeVisible();
+    await expect(page.getByText("Can't reach the server")).toHaveCount(0);
+  });
+});
+
+test.describe('connection status', () => {
+  test('shows an offline banner when the server is unreachable', async ({ page }) => {
+    await seedSession(page);
+    await stubApi(page);
+    // Override the data calls to fail (registered last → highest priority).
+    const fail = (route: import('@playwright/test').Route) =>
+      route.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+    await page.route('**/api/state', fail);
+    await page.route('**/api/orders/attention**', fail);
+
+    await page.goto('/');
+    await expect(page.getByText("Can't reach the server")).toBeVisible();
+  });
 });

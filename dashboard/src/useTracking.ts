@@ -11,6 +11,7 @@ interface Drawer { driverId: string; totalEGP: string; lines: DrawerLine[] }
 export function useTracking(wsBase: string, token: string, onEvent?: (msg: Record<string, unknown>) => void) {
   const [pins, setPins] = useState<Record<string, DriverPin>>({});
   const [drawers, setDrawers] = useState<Record<string, Drawer>>({});
+  const [connected, setConnected] = useState(false); // live socket state
   const [nonce, setNonce] = useState(0); // bump to force a reconnect
   const wsRef = useRef<WebSocket | null>(null);
   // Keep the latest callback without re-opening the socket every render.
@@ -25,6 +26,8 @@ export function useTracking(wsBase: string, token: string, onEvent?: (msg: Recor
     let retry: ReturnType<typeof setTimeout> | undefined;
     const ws = new WebSocket(`${wsBase}/ws/dashboard?token=${token}`);
     wsRef.current = ws;
+
+    ws.onopen = () => setConnected(true);
 
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
@@ -56,10 +59,11 @@ export function useTracking(wsBase: string, token: string, onEvent?: (msg: Recor
 
     // Reconnect on unexpected drop (not on unmount / logout).
     ws.onclose = () => {
+      setConnected(false);
       if (!closedByUs) retry = setTimeout(() => setNonce((n) => n + 1), 3000);
     };
     return () => { closedByUs = true; clearTimeout(retry); ws.close(); };
   }, [wsBase, token, nonce]);
 
-  return { pins, drawers };
+  return { pins, drawers, connected };
 }
