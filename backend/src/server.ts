@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import { PrismaClient } from '@prisma/client';
 import { attachTrackingWs } from './ws/tracking';
 import { orderRouter } from './routes/orders';
 import { authRouter } from './routes/auth';
@@ -34,13 +35,26 @@ if (NODE_ENV === 'production') {
 const corsOrigins = (process.env.CORS_ORIGIN ?? '*').split(',').map((o) => o.trim());
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const healthPrisma = new PrismaClient();
 const app = express();
 app.set('trust proxy', 1); // Render terminates TLS at a proxy; trust it for req.ip
 app.use(securityHeaders);
 app.use(cors({ origin: corsOrigins.includes('*') ? true : corsOrigins }));
 app.use(express.json({ limit: '256kb' }));
 
+// Liveness: is the process up? Kept shallow so a slow DB doesn't cause a host
+// to kill a healthy instance in a restart loop.
 app.get('/health', (_req, res) => res.json({ ok: true }));
+// Readiness: can we actually serve traffic (DB reachable)? Point your host's
+// health check here if it should pull an instance with a dead DB out of rotation.
+app.get('/health/ready', async (_req, res) => {
+  try {
+    await healthPrisma.$queryRaw`SELECT 1`;
+    res.json({ ok: true, db: 'up' });
+  } catch {
+    res.status(503).json({ ok: false, db: 'down' });
+  }
+});
 app.use('/api', authRouter);
 app.use('/api', orderRouter);
 app.use('/api', driverRouter);
