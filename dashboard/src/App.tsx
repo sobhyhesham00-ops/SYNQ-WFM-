@@ -56,6 +56,8 @@ export default function App() {
   const [showAttention, setShowAttention] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [attentionCount, setAttentionCount] = useState(0);
+  const [reachable, setReachable] = useState(true); // last API call succeeded?
+  const [wsEverOpen, setWsEverOpen] = useState(false); // ignore the pre-connect state
   const [toasts, setToasts] = useState<{ id: number; kind: 'error' | 'warn' | 'info' | 'ok'; text: string }[]>([]);
   const pushToast = (kind: 'error' | 'warn' | 'info' | 'ok', text: string) => {
     const id = Date.now() + Math.random();
@@ -65,7 +67,7 @@ export default function App() {
 
   // Live WS events → toast on a failed delivery, and keep the board + attention
   // badge fresh whenever any order/driver/cash event lands.
-  const { pins, drawers } = useTracking(WS_BASE, token ?? '', (msg) => {
+  const { pins, drawers, connected } = useTracking(WS_BASE, token ?? '', (msg) => {
     const type = msg.type as string | undefined;
     const order = msg.order as { status?: string; customerAddress?: string } | undefined;
     if (type === 'order_status' && order?.status === 'Failed') {
@@ -119,10 +121,15 @@ export default function App() {
     return api.state(token).then((s) => {
       setBusiness(s.business); setDrivers(s.drivers); setOrders(s.orders);
       setRefreshKey((k) => k + 1);
-    });
+      setReachable(true);
+    }).catch(() => setReachable(false));
   };
 
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [token]);
+
+  // Remember once the socket has opened, so a dropped connection reads as a
+  // problem while the brief pre-connect state on load does not.
+  useEffect(() => { if (connected) setWsEverOpen(true); }, [connected]);
 
   // Keep the header "needs attention" badge current.
   useEffect(() => {
@@ -141,6 +148,7 @@ export default function App() {
       try {
         const d = await api.attention(token);
         if (!live) return;
+        setReachable(true);
         setAttentionCount(d.count);
         const stale = [...d.stalePending, ...d.staleAssigned];
         if (firstAttentionPoll.current) {
@@ -156,7 +164,7 @@ export default function App() {
             }
           }
         }
-      } catch { /* offline — try again next tick */ }
+      } catch { if (live) setReachable(false); /* offline — try again next tick */ }
     };
     poll();
     const iv = setInterval(poll, 60_000);
@@ -200,8 +208,20 @@ export default function App() {
       : <Login onLogin={onLogin} onSwitch={() => setAuthView('signup')} />;
   }
 
+  const offline = !reachable || (wsEverOpen && !connected);
+
   return (
     <div className="app">
+      {offline && (
+        <div role="status" style={{
+          position: 'fixed', top: 0, insetInline: 0, zIndex: 3000,
+          background: '#f0a500', color: '#1a1730', textAlign: 'center',
+          padding: '7px 12px', fontWeight: 700, fontSize: 13,
+          boxShadow: '0 2px 10px rgba(0,0,0,.18)',
+        }}>
+          ⚠️ {reachable ? t('reconnecting') : t('serverUnreachable')}
+        </div>
+      )}
       {toasts.length > 0 && (
         <div style={{ position: 'fixed', bottom: 16, insetInlineEnd: 16, display: 'flex', flexDirection: 'column', gap: 8, zIndex: 2000 }}>
           {toasts.map((x) => (
