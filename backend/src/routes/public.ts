@@ -5,9 +5,18 @@
  */
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { rateLimit } from '../security';
 
 const prisma = new PrismaClient();
 export const publicRouter = Router();
+
+// These endpoints are unauthenticated (a shared link), so cap requests per IP to
+// blunt token-guessing / scraping. The tracking page polls ~7×/min, so 60/min is
+// generous for real use. Disabled under tests. Applies to all /track/* paths.
+const trackLimiter = process.env.NODE_ENV === 'test'
+  ? ((_req: unknown, _res: unknown, next: () => void) => next())
+  : rateLimit({ windowMs: 60_000, max: 60 });
+publicRouter.use('/track', trackLimiter);
 
 // Map internal status -> customer-friendly stage.
 const STAGE: Record<string, string> = {
