@@ -1,93 +1,112 @@
-# El Kaptin — Driver Tracking SaaS · System Architecture
+# Aura — Architecture
 
-> B2B live-tracking + Cash-on-Delivery (COD) reconciliation for independent
-> restaurants and takeaway chains running their own private fleets in Egypt.
+## Overview
 
----
-
-## 1. System Architecture & Real-Time Strategy
-
-### 1.1 The three moving parts
+Aura is a **client–server** system: a cross-platform mobile client (Expo/React Native) talks
+to a stateless **REST API** for CRUD/transactions and a **WebSocket gateway** (Socket.io)
+for realtime room state, chat, presence, and gift events. Low-latency **voice** rides on a
+dedicated media SDK (Agora), which the backend only *authorizes* (issues join tokens) rather
+than proxies.
 
 ```
-┌───────────────────────┐        ┌──────────────────────────────┐        ┌────────────────────────┐
-│   DRIVER MOBILE APP    │        │           BACKEND            │        │   MANAGER DASHBOARD    │
-│  (Flutter, Android/iOS)│        │ (Node.js + WS + PostgreSQL)  │        │   (React web, cashier) │
-│                        │        │                              │        │                        │
-│ Foreground service ───────WS──▶ │  /ws/driver  (ingest)        │        │                        │
-│ GPS batched every 20s  │  (send)│      │                       │        │                        │
-│                        │        │      ▼                       │        │                        │
-│ Order status buttons ──────────▶│  REST /api/orders            │        │                        │
-│                        │        │      │                       │        │                        │
-│                        │        │      ▼ persist + fan-out     │        │                        │
-│                        │        │  PostgreSQL (source of truth)│        │                        │
-│                        │        │      │                       │        │                        │
-│                        │        │      └──── WS /ws/dashboard ──────────▶│ Live map + COD drawer  │
-│                        │        │            (broadcast)       │  (recv)│                        │
-└───────────────────────┘        └──────────────────────────────┘        └────────────────────────┘
+                 ┌──────────────────────────── Mobile (Expo / React Native, TS) ───────────────────────────┐
+                 │  Screens: Auth · Rooms · Room · RandomChat · Wallet/Store · Identity · Profile           │
+                 │  State: Zustand   ·   API client (REST)   ·   Socket client (realtime)   ·   Agora SDK   │
+                 └───────────┬───────────────────────────────┬───────────────────────────────┬─────────────┘
+                REST/HTTPS   │                    WebSocket   │                    Media (SFU) │
+                             ▼                                ▼                                ▼
+                 ┌───────────────────────┐        ┌───────────────────────┐        ┌───────────────────┐
+                 │  Express REST API     │        │  Socket.io gateway    │        │  Agora (voice)    │
+                 │  auth·users·rooms·    │◄──────►│  rooms·chat·presence· │        │  token-authorized │
+                 │  gifts·wallet·identity│  share │  gifts·matchmaking    │        │  by backend       │
+                 └───────────┬───────────┘  state └───────────┬───────────┘        └───────────────────┘
+                             │                                │
+                             ▼                                ▼
+                 ┌───────────────────────┐        ┌───────────────────────┐
+                 │  PostgreSQL (Prisma)  │        │  Redis (presence,     │
+                 │  durable state        │        │  matchmaking, pub/sub)│   ← add for scale
+                 └───────────────────────┘        └───────────────────────┘
 ```
 
-- **Driver app** is the *only* GPS source (hardware-free). It pushes location
-  over a single persistent WebSocket and changes order state over REST.
-- **Backend** is the source of truth. It ingests locations, throttles/persists
-  them, and fans out live positions to any dashboards watching that restaurant.
-- **Manager dashboard** subscribes to a room (`restaurant:{id}`) and renders a
-  live map + the COD cash drawer.
+## Backend (`/backend`)
 
-### 1.2 Transport decision: WebSockets vs Firebase
+- **Runtime:** Node.js + TypeScript, **Express** for REST, **Socket.io** for realtime.
+- **ORM/DB:** **Prisma** over **PostgreSQL**. Schema in `prisma/schema.prisma`.
+- **Auth:** JWT (access + refresh). Phone/email OTP or social login in production.
+- **Modules** (`src/modules/*`), each a router + service:
+  - `auth` — register/login, JWT issuance, `me`.
+  - `users` — profiles, status/mood, follows, identity load-out (worn cosmetics).
+  - `rooms` — create/list/join/leave audio rooms, seats/roles, Agora token issuance.
+  - `chat` — random-chat matchmaking queue + 1:1 sessions.
+  - `gifts` — gift catalog + send-gift transaction (debits coins, credits diamonds,
+    updates Wealth/Charm, emits realtime event).
+  - `wallet` — coin balance, top-up (IAP/Stripe verification seam), diamond balance,
+    ledger of transactions.
+  - `identity` — levels (Charm/Wealth/Activity), cosmetics store & inventory, VIP tiers,
+    badges, leaderboards, CP bonds, families.
+- **Realtime gateway** (`src/realtime/socket.ts`): authenticates sockets via JWT, manages
+  room membership, broadcasts chat/gift/seat/entrance events, runs the random-chat matcher.
+- **Cross-cutting:** config/env loader, Prisma singleton, auth middleware, error handler,
+  rate limiting, request logging.
 
-| Concern | Raw WebSockets (chosen) | Firebase RTDB / Firestore |
-|---|---|---|
-| **Cost at MVP scale** | One small VM/container (e.g. Fly.io / Hetzner / Railway) runs WS + API + Postgres for ~$5–15/mo, flat. | Firestore bills **per document read/write**. Live tracking = a write every 20s per driver **and a read on every dashboard for every write**. 20 drivers × dashboards open all day silently burns the free tier and becomes the dominant cost. |
-| **Egypt data usage** | Full control: batch N points per frame, gzip/permessage-deflate, binary payloads. Can drop to ~1 tiny frame / 20s. | SDK is chatty (auth refresh, metadata, listener overhead). Harder to squeeze on 3G. |
-| **COD / money** | Postgres transactions + row locks give real ACID for cash reconciliation. | Firestore has transactions but aggregation & reporting on cash is awkward; you end up needing a SQL warehouse anyway. |
-| **Offline buffering** | You implement a local queue in the app (shown in §3). More work, full control. | SDK handles offline persistence for free. |
-| **Time to first demo** | ~1 day to a working socket. | ~2 hours; great for a throwaway prototype. |
+### Why these choices
+- **Express + Socket.io + Prisma**: fast to build, huge ecosystem, easy hiring, scales
+  horizontally behind a load balancer once realtime state moves to **Redis** (pub/sub +
+  presence + matchmaking) — the single change that unlocks multi-instance scale.
+- **Agora for media**: building global low-latency audio SFU in-house is a multi-year effort;
+  Agora/LiveKit/100ms give it turnkey with per-minute pricing. Backend only mints tokens.
+- **Postgres**: relational integrity matters for a *wallet/ledger* (money). Use transactions
+  for gift sends and top-ups so balances never drift.
 
-**Recommendation for this MVP: raw WebSockets + PostgreSQL.**
-The workload is *high-frequency, low-value* location writes plus *low-frequency,
-high-value* money writes. Firestore's per-operation pricing is exactly wrong for
-the first, and its weak aggregation is wrong for the second. A single small Node
-process handles dozens of restaurants and hundreds of drivers before you need to
-scale, and hosting stays a flat, predictable few dollars a month — which matters
-for an Egypt-market price point.
+## Mobile (`/mobile`)
 
-> **When Firebase *does* win:** if you have zero backend engineers and want a
-> 2-week pilot with one restaurant, Firestore + its offline SDK removes a lot of
-> plumbing. The schema in `SCHEMA.md` includes a Firestore variant so you can
-> start there and migrate the transport later — the app and dashboard talk to a
-> thin `TrackingChannel` interface, not to the socket directly (see
-> `mobile/flutter/lib/services/api_client.dart`).
+- **Expo + React Native + TypeScript** → one codebase for **iOS + Android** (and web preview).
+- **Navigation:** React Navigation (auth stack → main tabs: Rooms · Discover · Chat · Wallet
+  · Profile).
+- **State:** Zustand stores (auth/session, wallet, rooms). REST via a typed `api` client;
+  realtime via a Socket.io client hook.
+- **Voice:** `react-native-agora` (dev client / EAS build; not available in plain Expo Go).
+- **Payments:** `expo-in-app-purchases` / RevenueCat for coins; server-side receipt
+  verification before crediting coins.
+- **Identity rendering:** frames, entrance effects, bubbles, badges are data-driven from the
+  user's worn load-out so new cosmetics ship without app updates.
 
-### 1.3 Real-time data flow (the happy path)
+## Data model (high level)
 
-1. Driver goes on shift → app starts a **foreground service** (visible
-   notification) and opens `wss://api/ws/driver?token=…`.
-2. Every 20s (or on ≥50 m movement) the service appends a `{lat,lng,ts}` sample
-   to an in-memory ring buffer.
-3. Every 20s a flush timer sends **one** WS frame containing the batched
-   samples. If the socket is down, samples stay in a SQLite/Hive queue and flush
-   on reconnect.
-4. Backend receives the frame → writes the **latest** point to
-   `drivers.current_lat/lng` (a cheap UPDATE) and appends all points to
-   `location_logs` (a batched INSERT). It then broadcasts *only the latest
-   point* to the `restaurant:{id}` dashboard room.
-5. Order lifecycle (`Assigned → PickedUp → Delivered`) goes over REST so it's
-   transactional; the resulting state change is also broadcast to the dashboard.
-6. Dashboard renders driver pins + updates the COD drawer totals live.
+`User` ↔ `Profile` ↔ `IdentityLoadout` (worn cosmetics) · `Wallet` (coins/diamonds) ·
+`Transaction` (ledger) · `Room` ↔ `RoomMember`/`Seat` · `Gift` ↔ `GiftEvent` ·
+`CosmeticItem` ↔ `InventoryItem` · `LevelStats` (charm/wealth/activity) · `Badge`/`UserBadge`
+· `VipTier` · `Bond` (CP) · `Family`/`FamilyMember` · `Match`/`Like` · `Follow`.
+Full definitions in `backend/prisma/schema.prisma`.
 
-### 1.4 Why "latest to dashboard, all to DB"
+## Realtime event contract (Socket.io)
 
-The dashboard only needs the *current* pin, so we broadcast a single small
-object — cheap for the manager's browser and bandwidth. The history table gets
-every batched point for the route replay / audit / dispute features later. This
-split keeps both the wire and the manager's data usage minimal.
+| Event (client→server) | Purpose |
+| --- | --- |
+| `room:join` / `room:leave` | join/leave a room (returns Agora token, triggers `entrance`) |
+| `room:seat:request` / `seat:set` | mic seat management |
+| `room:message` | in-room text/emote |
+| `gift:send` | send a gift (server validates coins, then broadcasts) |
+| `match:enqueue` / `match:skip` | random-chat matchmaking |
+| `presence:status` | set online/away/busy/invisible + mood |
 
-### 1.5 Scaling notes (post-MVP, not needed day one)
+| Event (server→client) | Purpose |
+| --- | --- |
+| `room:state` | full/patch room state (members, seats) |
+| `room:entrance` | broadcast entrance effect for VIP/mount |
+| `room:message` / `gift:recv` | fan-out chat & gift animations |
+| `match:found` | random-chat pair established |
+| `wallet:update` | balance changes (after gift/top-up) |
 
-- Add Redis pub/sub between multiple Node instances so any instance can
-  broadcast to any dashboard room.
-- Move `location_logs` to a time-series partition (monthly) or TimescaleDB;
-  it's the only table that grows without bound.
-- Put the WS layer behind a load balancer that supports sticky sessions or
-  token-routing.
+## Scaling path
+1. **MVP (this scaffold):** single API instance, in-memory realtime/matchmaking, Postgres.
+2. **Add Redis:** presence, matchmaking queue, and Socket.io adapter → run N API instances.
+3. **Split services:** extract realtime gateway and payments/ledger workers.
+4. **Media scale:** Agora handles voice; add regional token servers + CDN for assets.
+5. **Data:** read replicas, partition ledger/events, move analytics to a warehouse.
+
+## Security & money integrity
+- All wallet mutations run inside DB transactions with an append-only `Transaction` ledger.
+- Server is the source of truth for coin/diamond balances — clients never set balances.
+- Receipt verification (Apple/Google/Stripe) **before** crediting coins.
+- JWT on both REST and sockets; per-endpoint rate limits; input validation (zod) at the edge.

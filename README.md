@@ -1,171 +1,160 @@
-# El Kaptin · الكابتن — Driver Tracking SaaS
+# Aura 🌙
 
-> *"Every order gets a **captain**."* — hardware-free, phone-GPS live tracking
-> + Cash-on-Delivery (COD) reconciliation for independent restaurants and
-> takeaway chains running their own private delivery fleets in Egypt.
+**A global, audio-first social dating app.** No camera, just voice. Aura is where people
+meet through *how they sound and what they say* — live audio rooms, free random voice/text
+chats, a rich virtual-gifting economy, and a deep **identity & recognition system** that
+makes every user instantly distinct. Think **Wakie / Goodnight**, fused with the status
+economy of **Yalla / Bigo / MICO**, reimagined for a global audience with monetization
+built in from day one.
 
-**Two apps, one system:** a battery-proof Flutter **driver app**, and a React
-**manager/cashier dashboard** — talking to one lean Node + PostgreSQL backend.
+> Platforms: **iOS + Android** (single React Native / Expo codebase) with a Node.js + Postgres backend.
 
-**Built for Egypt's small merchants.** Multi-vertical by design — restaurants,
-takeaways, pharmacies (with prescription flags), groceries, mini-markets, the
-street **koshk (كشك)**, and a catch-all store. Fully **bilingual: Egyptian
-Arabic (colloquial, RTL) + English**, with a one-tap language toggle across the
-dashboard, driver app, and customer tracking page. Landmark-based addressing,
-one-tap **Call**/WhatsApp, and COD reconciliation reflect how deliveries
-actually work here — see [`docs/EGYPT-MARKET.md`](docs/EGYPT-MARKET.md).
+---
 
-| Dashboard — Egyptian Arabic (RTL) | Pharmacy vertical (℞ + prescription) | Customer tracking (Arabic) |
-|---|---|---|
-| ![AR dashboard](docs/screenshots/i18n-restaurant-ar.png) | ![Pharmacy](docs/screenshots/i18n-pharmacy-ar.png) | ![Customer](docs/screenshots/i18n-customer-ar.png) |
+## ✨ The core idea
 
-| Merchant signup — business-type picker | Ramadan iftar-rush banner (live countdown) |
-|---|---|
-| ![Signup](docs/screenshots/signup.png) | ![Ramadan](docs/screenshots/ramadan.png) |
+Video dating is high-pressure and appearance-first. Voice is intimate, low-pressure, and
+inclusive — you fall for a personality before a face. Aura leans all the way into audio,
+then layers on a **status economy** so people don't just talk — they *belong, climb, and
+get recognized*.
 
-**Self-service signup:** merchants create their own business, pick a vertical,
-and are logged straight in. **Ramadan mode:** a 🌙 toggle shows a live countdown
-to iftar and turns into a red "rush" alert within 2 hours of maghrib — Egypt's
-delivery peak — so managers get drivers ready. The **driver app** logs in
-against the real API (phone + PIN → JWT in secure storage) and loads its live
-orders, earnings, and delivery flow from the backend.
+| Pillar | What it is |
+| --- | --- |
+| 🎙️ **Live Audio Rooms** | Camera-off group voice rooms ("Late Night", "Language Exchange", "Sing to Me"). A host + speakers on stage, unlimited listeners who can request the mic. |
+| 🔀 **Free Random Chat** | One-tap matchmaking into a 1:1 voice or text chat with a stranger. Free and unlimited — the top of the funnel. |
+| 🎁 **Virtual Gifts** | Animated gifts (Rose, Crown, Galaxy, Sports Car) sent to speakers and matches. Gifts cost **coins**; coins cost real money — the primary revenue engine. |
+| 🪪 **Identity & Recognition** | Levels, badges, avatar frames, entrance effects, VIP tiers, titles, statuses & emojis — every user is visibly unique. |
+| 🌍 **Language & Global** | Multi-language profiles, language-filtered rooms (include/exclude), and language-aware matchmaking + an "exchange" mode — built for a worldwide audience. |
+| 💞 **Dating & Bonds** | Profiles, vibe tags, voice-intro bios, likes, matches, and public **CP/couple bonds** — audio社交 turns into real connection. |
 
-| Onboarding checklist (fresh signup) | Today's analytics strip |
-|---|---|
-| ![Onboarding](docs/screenshots/onboarding.png) | ![Analytics](docs/screenshots/analytics.png) |
+Full spec: [`docs/PRODUCT.md`](docs/PRODUCT.md) · Monetization: [`docs/REVENUE.md`](docs/REVENUE.md)
 
-**Onboarding:** a fresh business sees a "Get started" checklist (add first
-driver → create first order) instead of an empty page. **Analytics:** a live
-"today" strip — orders, delivered, avg delivery time, cash collected.
-**Smart assignment:** the assign dropdown ranks idle drivers by distance from
-the shop (Haversine over live GPS) and flags the 🎯 nearest one.
+---
 
-| Delivery handover code (customer) | Post-delivery rating (customer) |
-|---|---|
-| ![Delivery code](docs/screenshots/proof-code.png) | ![Rating](docs/screenshots/proof-rating.png) |
+## 🪪 Identity & Recognition — "recognize every user from the other"
 
-**Proof of delivery:** every assignment mints a 4-digit code shown on the
-customer's tracking page; the driver must enter it to mark *Delivered* — cutting
-COD "I never got it" disputes. **Ratings:** the customer rates the driver after
-delivery; the average shows on each driver's cash-drawer card. **Cash report:**
-one-click CSV export of the week's deliveries for the owner's books. **Push:**
-FCM plumbing (device-token endpoint + notify service) pings the driver on a new
-assignment — set `FCM_SERVER_KEY` to go live; it no-ops safely without one.
+The heart of Aura's stickiness and spend. Every user carries a stack of earned **and**
+purchased signals so they're instantly distinct in any room or chat:
 
-## Screenshots
+**Triple progression** — the "who matters here" engine:
 
-The dashboard running against the real backend (Postgres + WebSocket). Street
-tiles need outbound network; the live driver pins, cash drawer, and route
-replay are driven by seeded backend data.
+| Track | Grows from | Signals |
+| --- | --- | --- |
+| ❤️ **Charm Level** | gifts *received* | popularity / desirability |
+| 💎 **Wealth Level** | coins *spent* | status / generosity |
+| ⭐ **Activity Level (XP)** | time in rooms, chats, streaks | loyalty / veteran status |
 
-| Live fleet + cash drawer | Route replay (from `location_logs`) |
-|---|---|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Route replay](docs/screenshots/route-replay.png) |
+**Worn identity** (visible everywhere; most are sellable → deepens the economy):
+- **Avatar Frames** — animated borders (Rose Gold, Dragon, Galaxy)
+- **Entrance Effects** 🚗 — a ride/animation on room entry (*"Aura King entered in a Golden Phoenix"*)
+- **Chat Bubble skins & Nameplate colors** — your messages stand out
+- **Honor Titles / custom tags** — "Night Mayor", "Top Gifter", founder tags
+- **Badges & Medals** — achievements, events, **verification** (✅ verified · 🎙️ host · 🛡️ mod)
+- **VIP / Noble tiers** — Baron → Viscount → Duke → King, each with perks + flex
 
-Customer-facing live tracking link (`/t/:token`, no login — shareable by SMS):
+**Presence & personality:**
+- **Status**: online / away / busy / invisible + **custom status line** + **mood emoji** 😴🔥🎧
+- Vibe tags, country flag 🌍, languages spoken, voice-intro bio, streaks & daily check-in
 
-![Customer tracking](docs/screenshots/customer-tracking.png)
+**Social bonds** (viral + monetizable):
+- **CP / Couple bonds** 💞 — publicly link two users with a rising heart level
+- **Families / Guilds** — houses with their own badge, level, and leaderboard
+- **Leaderboards** — Top Gifters, Top Charm, Rising Stars, weekly room rankings
 
-## Repo layout
+Everything here is either a *reason to spend* (frames, entrances, VIP, mounts) or a *reason
+to return* (levels, streaks, leaderboards, bonds). **Recognition is the product; gifting is
+how you climb.**
+
+---
+
+## 💰 How Aura makes money (summary)
+
+A **hybrid "freemium + virtual economy"** model — the model that makes Wakie, Goodnight,
+Litmatch, Yalla, and Bigo Live profitable at global scale.
+
+1. **Virtual gifting (primary, ~60–70% of revenue).** Buy coins → send gifts → creators
+   receive diamonds → cash out. Aura keeps the spread (typically 50–70%).
+2. **Coin/top-up packs.** Direct sale of in-app currency via Apple IAP, Google Play
+   Billing, and (web) card/local wallets.
+3. **Identity storefront.** Frames, entrance effects, bubbles, mounts, titles — cosmetics
+   sold for coins. Pure-margin and self-reinforcing with the recognition system.
+4. **Aura+ / VIP subscription.** Unlimited rewinds, "see who liked you", incognito join,
+   boosts, exclusive gifts, ad-free — plus the Noble tiers.
+5. **Room & creator economy.** Ticketed/paid rooms, host revenue-share to attract talent.
+6. **Boosts & à-la-carte.** Profile boosts, Super Likes, room-list spotlight, priority match.
+7. **Advertising (free tier only).** Rewarded video ("watch to earn coins") + native placements.
+
+**North-star:** grow *payer conversion* (target 3–8% of MAU) and *ARPPU* while keeping the
+free random-chat funnel wide. Details in [`docs/REVENUE.md`](docs/REVENUE.md).
+
+---
+
+## 🏗️ Architecture at a glance
 
 ```
-.
-├── docs/
-│   └── ARCHITECTURE.md          System architecture + WS-vs-Firebase decision
-├── backend/                     Node + WebSocket + PostgreSQL (the whole backend)
-│   ├── prisma/schema.prisma     PostgreSQL schema (Prisma)
-│   ├── sql/schema.sql           Same schema as raw SQL
-│   └── src/
-│       ├── server.ts            One process = REST API + WS tracking
-│       ├── ws/tracking.ts       Batched location ingest + dashboard fan-out
-│       ├── routes/              Auth + order lifecycle (transactional)
-│       ├── services/cashDrawer.ts   COD reconciliation (the money logic)
-│       └── db/seed.ts           Demo restaurant + drivers + orders
-├── dashboard/                   React + Vite + MapLibre manager dashboard
-│   └── src/                     Live map, order assign, cash-drawer settle
-├── mobile/flutter/              Driver app w/ background foreground service
-│   └── lib/
-│       ├── screens/             Login + home (shift toggle, cash hero)
-│       ├── services/location_service.dart   The battery-proof tracking core
-│       └── theme.dart           Shared El Kaptin visual identity
-├── firestore/                   Alternative if you skip the SQL backend
-└── docker-compose.yml           One-command Postgres + backend
+┌─────────────────┐        REST + WebSocket        ┌──────────────────────┐
+│   Mobile app    │  ←──────────────────────────→  │   Backend API        │
+│ (Expo / RN, TS) │                                │ (Node, Express, TS)  │
+│ Rooms · Chat    │        Realtime audio          │  ├─ Auth / JWT        │
+│ Wallet · Gifts  │  ←──────  (Agora SDK)  ──────→  │  ├─ Rooms + signaling │
+│ Identity · Bonds│                                │  ├─ Random matchmaker │
+└─────────────────┘                                │  ├─ Gifts + wallet    │
+        │                                          │  ├─ Identity/levels   │
+        │ Apple IAP / Google Play / Stripe         │  └─ Socket.io gateway │
+        ▼                                                       ▼
+   App stores (coin purchases)                         PostgreSQL (Prisma)
 ```
 
-## The four answers, in one line each
+Full write-up: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-1. **Real-time strategy** — one Node process holds a WebSocket per driver
-   (batched frames every 20s) and fans the latest point out to dashboard rooms.
-   Chosen over Firestore because per-operation billing is wrong for
-   high-frequency location writes, and SQL transactions are right for cash. See
-   `docs/ARCHITECTURE.md`.
-2. **Schema** — `restaurants · drivers · orders · location_logs` with money in
-   integer piastres and denormalized `current_lat/lng` hot columns. See
-   `backend/prisma/schema.prisma` / `backend/sql/schema.sql`.
-3. **Background tracking** — Android **foreground service** with a visible
-   notification (`flutter_background_service`) so budget OEM phones can't freeze
-   it; batched, movement-filtered GPS with an offline queue. See
-   `mobile/flutter/lib/services/location_service.dart` and the manifest snippet.
-4. **Cash drawer** — aggregate each driver's `Delivered && !settled` orders;
-   settle atomically under a row lock. See
-   `backend/src/services/cashDrawer.ts`.
+- **`mobile/`** — Expo React Native app (iOS + Android).
+- **`backend/`** — Express + TypeScript API, Prisma ORM (Postgres), Socket.io realtime.
+- **`docs/`** — product, revenue, architecture, roadmap.
 
-## Local quick start
+---
 
-**Option A — one command (Docker):**
+## 🚀 Quick start (local dev)
+
 ```bash
-docker compose up --build          # Postgres + backend on :8080
-docker compose exec backend npx tsx src/db/seed.ts   # demo data
-```
-
-**Option B — manual backend:**
-```bash
+# 1. Backend
 cd backend
+cp .env.example .env          # fill in secrets
 npm install
-# set DATABASE_URL + JWT_SECRET in .env
-npx prisma db push    # create the tables (no migrations yet — see below)
-npm run seed          # demo restaurant + drivers + orders
-npm run dev           # REST + WS on :8080
+npm run prisma:generate
+npm run dev                    # API on http://localhost:4000
+
+# 2. Mobile (second terminal)
+cd mobile
+npm install
+npm start                      # Expo dev server — scan QR with Expo Go
 ```
 
-**Dashboard:**
-```bash
-cd dashboard
-npm install
-npm run dev           # http://localhost:5173
-```
+Postgres via Docker: `docker compose up -d db`.
 
-**Demo login:** `manager@demo.eg` / `password123`
-(drivers: `01000000001` / `1234`, `01000000002` / `1234`)
+---
 
-### UI / design
-The dashboard and driver app share one fintech-inspired visual language
-(soft lilac gradients, rounded cards, a bold gradient balance hero, pill
-buttons, status chips). The fleet's **total COD cash to collect** is the hero
-"balance" card; each driver is a holdings-style row with a *Received cash*
-settle button. See `dashboard/src/index.css` and `mobile/flutter/lib/theme.dart`.
+## 🔌 Third-party services you'll plug in
 
-## Run it live
+| Concern | Recommended provider | Why |
+| --- | --- | --- |
+| Live audio | **Agora** (or 100ms / LiveKit) | Low-latency global voice, generous free tier. |
+| Coin purchases (mobile) | **Apple IAP + Google Play Billing** | Required for digital goods by store policy. |
+| Payments (web / payouts) | **Stripe** (+ local rails: Fawry, M-Pesa) | Card + creator payouts globally. |
+| Push notifications | **Expo Notifications / FCM / APNs** | Re-engagement (huge for retention). |
+| Moderation | **Hive / AWS + human review** | Voice/text safety at global scale. |
 
-- **No cloud account / no card:** open a **GitHub Codespace** and run
-  `bash scripts/codespace-up.sh` — it starts everything and prints a public URL
-  your phone can reach. See [`docs/DEPLOY-CODESPACES.md`](docs/DEPLOY-CODESPACES.md).
-- **Always-on pilot:** Railway ([`docs/DEPLOY-RAILWAY.md`](docs/DEPLOY-RAILWAY.md),
-  ships `railway.json`), Render (`render.yaml`), Fly.io, or a small VM. See
-  [`DEPLOY.md`](DEPLOY.md).
-- **Driver APK:** GitHub → Actions → **"Build driver APK"** → Run workflow with
-  your backend URL → download the installable artifact. See
-  [`mobile/flutter/README.md`](mobile/flutter/README.md).
-- **Pilot checklist:** honest "real vs. stub", per-phone battery setup, rollback
-  — [`PILOT.md`](PILOT.md).
-- **Maps:** free-tier MapLibre + OpenStreetMap tiles (no Google Maps billing);
-  drivers deep-link into their own Google Maps for turn-by-turn.
+Integrations sit behind clean interfaces (`backend/src/modules/*`) with `// TODO(provider)`
+seams so real keys drop in without rewrites.
 
-## State of the code
+---
 
-Runnable and verified end-to-end (against real Postgres + WebSockets): live
-tracking, the order + COD cash lifecycle, OTP proof-of-delivery, auth with
-refresh tokens + rate limiting, and resilient error handling are all in place
-and exercised. Still stubbed for a real pilot: **payment capture** (the wallet
-checkout only records a reference), **Prisma migrations** (we use `db push`),
-and **DB backups** — see [`PILOT.md`](PILOT.md).
+## 📍 Status
+
+A **production-shaped MVP scaffold** — architecture, data model, core APIs, realtime
+gateway, identity system, and mobile screens are in place with mock/in-memory
+implementations where a paid SDK or store account is required. Meant to be run, demoed, and
+iterated on — not shipped to stores unchanged. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+## 📄 License
+
+See [`LICENSE`](LICENSE).

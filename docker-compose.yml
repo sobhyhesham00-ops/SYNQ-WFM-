@@ -1,34 +1,39 @@
-# One-command local/staging stack: Postgres + backend.
-#   docker compose up --build
-#   docker compose exec backend npx tsx src/db/seed.ts   # seed demo data
+version: "3.9"
+
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: meshwar
-      POSTGRES_PASSWORD: meshwar
-      POSTGRES_DB: meshwar
+      POSTGRES_USER: aura
+      POSTGRES_PASSWORD: aura
+      POSTGRES_DB: aura
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U meshwar"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - aura_db:/var/lib/postgresql/data
 
-  backend:
-    build: ./backend
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: "postgresql://meshwar:meshwar@db:5432/meshwar?schema=public"
-      JWT_SECRET: "change-me-in-prod"
-      PORT: "8080"
+  # Redis is optional for the MVP (in-memory presence/matchmaking works without it),
+  # but wire it in for horizontal scale — see docs/ARCHITECTURE.md.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "6379:6379"
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://aura:aura@db:5432/aura?schema=public
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "4000:4000"
+    depends_on:
+      - db
+      - redis
 
 volumes:
-  pgdata:
+  aura_db:

@@ -1,13 +1,6 @@
-// El Kaptin — PostgreSQL schema (Prisma)
-// Run: npx prisma migrate dev --name init
-//
-// Design notes:
-//  - `Driver.currentLat/Lng` are denormalized "hot" columns updated on every
-//    location frame so the dashboard reads one row, not a scan of location_logs.
-//  - `LocationLog` is the append-only history table; it is the only unbounded
-//    table and is indexed for time-range route replay.
-//  - Money is stored in integer *piastres* (1 EGP = 100 piastres) to avoid
-//    floating-point rounding on cash reconciliation. Never use FLOAT for money.
+// Aura data model — see docs/ARCHITECTURE.md for the high-level map.
+// Money/status integrity: Wallet balances are only mutated inside transactions that also
+// append a Transaction ledger row. The server is the sole source of truth for balances.
 
 generator client {
   provider = "prisma-client-js"
@@ -18,167 +11,414 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Subscription tier (billing is out-of-band via Fawry/wallet; this just records
-// what the merchant is on and drives plan-based limits/badges).
-enum PlanTier {
-  Free
-  Starter
-  Growth
-  Chain
+// ─────────────────────────────── Users & profile ───────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String?  @unique
+  phone        String?  @unique
+  passwordHash String?
+  role         UserRole @default(USER)
+  verified     Boolean  @default(false) // ✅ verified badge
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile      Profile?
+  wallet       Wallet?
+  levelStats   LevelStats?
+  presence     Presence?
+
+  // Identity
+  inventory    InventoryItem[]
+  loadout      IdentityLoadout?
+  userBadges   UserBadge[]
+  vip          VipMembership?
+
+  // Social
+  followers    Follow[] @relation("following")
+  following    Follow[] @relation("follower")
+  likesGiven   Like[]   @relation("liker")
+  likesGot     Like[]   @relation("liked")
+  bondsA       Bond[]   @relation("bondUserA")
+  bondsB       Bond[]   @relation("bondUserB")
+  familyMember FamilyMember?
+
+  // Rooms & economy
+  roomsOwned   Room[]        @relation("roomOwner")
+  roomMembers  RoomMember[]
+  giftsSent    GiftEvent[]   @relation("giftSender")
+  giftsGot     GiftEvent[]   @relation("giftReceiver")
+  transactions Transaction[]
 }
 
-// The kind of merchant using El Kaptin. Drives the UI's vocabulary per vertical.
-// Covers Egypt's small-merchant long tail: eateries, pharmacies, groceries
-// (بقالة), mini-markets, the ubiquitous street kiosk (كشك), and a catch-all.
-enum BusinessType {
-  Restaurant
-  Takeaway
-  Pharmacy
-  Grocery
-  Minimarket
-  Kiosk
-  Other
+enum UserRole {
+  USER
+  HOST
+  MODERATOR
+  STAFF
 }
 
-// A tenant merchant (restaurant / takeaway / pharmacy). Every driver, order and
-// dashboard session belongs to one. (Model kept named `Restaurant` for FK
-// stability; `businessType` is the real vertical — surfaced as "business".)
-model Restaurant {
-  id           String       @id @default(uuid())
+model Profile {
+  id                String            @id @default(cuid())
+  userId            String            @unique
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName       String
+  avatarUrl         String?
+  voiceIntroUrl     String? // audio-first: a spoken bio clip
+  bio               String?
+  gender            String?
+  birthdate         DateTime?
+  countryCode       String? // ISO-3166 for flag 🌍
+  vibeTags          String[] // e.g. ["night owl","gamer","poet"]
+  interests         String[]
+
+  // Language & global connection — see docs/PRODUCT.md §5
+  primaryLanguage   String? // BCP-47, e.g. "en", "ar", "es"
+  languages         ProfileLanguage[]
+  learningLanguages String[] // languages the user wants to learn
+  openToExchange    Boolean           @default(false)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model ProfileLanguage {
+  id          String       @id @default(cuid())
+  profileId   String
+  profile     Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  language    String // BCP-47 code
+  proficiency Proficiency  @default(FLUENT)
+
+  @@unique([profileId, language])
+}
+
+enum Proficiency {
+  NATIVE
+  FLUENT
+  LEARNING
+}
+
+// Presence & personality — status/mood
+model Presence {
+  userId       String         @id
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       PresenceStatus @default(OFFLINE)
+  moodEmoji    String? // 😴🔥🎧
+  customStatus String? // "looking for a late-night chat"
+  lastActiveAt DateTime       @default(now())
+}
+
+enum PresenceStatus {
+  ONLINE
+  AWAY
+  BUSY
+  INVISIBLE
+  OFFLINE
+}
+
+// ─────────────────────────── Identity & recognition ────────────────────────────
+
+// Triple progression: charm (gifts received), wealth (coins spent), activity (XP).
+model LevelStats {
+  userId       String @id
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  charmXp      BigInt @default(0)
+  charmLevel   Int    @default(1)
+  wealthXp     BigInt @default(0)
+  wealthLevel  Int    @default(1)
+  activityXp   BigInt @default(0)
+  activityLevel Int   @default(1)
+  streakDays   Int    @default(0)
+  lastCheckIn  DateTime?
+}
+
+// Sellable/earnable cosmetics: frames, entrance effects (mounts), bubbles, nameplates, titles.
+model CosmeticItem {
+  id          String        @id @default(cuid())
+  type        CosmeticType
+  name        String
+  assetUrl    String? // Lottie/animation/image
+  priceCoins  Int           @default(0) // 0 = not directly purchasable (earned/VIP)
+  rarity      Rarity        @default(COMMON)
+  vipOnly     Boolean       @default(false)
+  minLevel    Int           @default(0)
+  durationDays Int? // null = permanent; else timed rental
+  active      Boolean       @default(true)
+  inventory   InventoryItem[]
+}
+
+enum CosmeticType {
+  AVATAR_FRAME
+  ENTRANCE_EFFECT // mounts/rides
+  CHAT_BUBBLE
+  NAMEPLATE
+  PROFILE_THEME
+  HONOR_TITLE
+}
+
+enum Rarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+  LIMITED
+}
+
+model InventoryItem {
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cosmeticId String
+  cosmetic   CosmeticItem @relation(fields: [cosmeticId], references: [id])
+  acquiredAt DateTime     @default(now())
+  expiresAt  DateTime? // for timed rentals
+  equipped   Boolean      @default(false)
+
+  @@unique([userId, cosmeticId])
+}
+
+// The user's currently-worn identity (denormalized for fast render in rooms/profiles).
+model IdentityLoadout {
+  userId          String  @id
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  frameId         String?
+  entranceId      String?
+  bubbleId        String?
+  nameplateId     String?
+  profileThemeId  String?
+  titleId         String?
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  code        String      @unique // "TOP_GIFTER_WEEK", "VERIFIED", "EVENT_2026"
+  name        String
+  iconUrl     String?
+  description String?
+  users       UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId   String
+  badge     Badge    @relation(fields: [badgeId], references: [id])
+  awardedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+}
+
+// VIP / Noble tiers: Baron → Viscount → Earl → Duke → King
+model VipTier {
+  id            String          @id @default(cuid())
+  code          String          @unique // "BARON" ... "KING"
+  name          String
+  level         Int // ordering
+  monthlyPrice  Int // in cents (USD baseline; localize per market)
+  monthlyCoins  Int             @default(0) // stipend
+  perks         String[]
+  memberships   VipMembership[]
+}
+
+model VipMembership {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tierId    String
+  tier      VipTier  @relation(fields: [tierId], references: [id])
+  startedAt DateTime @default(now())
+  expiresAt DateTime
+  autoRenew Boolean  @default(true)
+}
+
+// ─────────────────────────────── Wallet & ledger ───────────────────────────────
+
+model Wallet {
+  userId   String @id
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coins    BigInt @default(0) // hard currency (bought)
+  diamonds BigInt @default(0) // soft currency (earned from gifts; cashable)
+  updatedAt DateTime @updatedAt
+}
+
+// Append-only ledger. Every balance change writes one row.
+model Transaction {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       TransactionType
+  coinsDelta BigInt          @default(0)
+  diamondDelta BigInt        @default(0)
+  reference  String? // e.g. giftEventId, IAP receipt id, payout id
+  metadata   Json?
+  createdAt  DateTime        @default(now())
+
+  @@index([userId, createdAt])
+}
+
+enum TransactionType {
+  TOPUP // bought coins (IAP/Stripe)
+  GIFT_SENT // spent coins on a gift
+  GIFT_RECEIVED // earned diamonds from a gift
+  COSMETIC_PURCHASE
+  VIP_PURCHASE
+  BOOST_PURCHASE
+  PAYOUT // cashed out diamonds
+  REWARD // ads/quests/check-in
+  REFUND
+  ADJUSTMENT
+}
+
+// ─────────────────────────────── Gifts ─────────────────────────────────────────
+
+model Gift {
+  id           String      @id @default(cuid())
   name         String
-  phone        String?
-  businessType BusinessType @default(Restaurant)
-  plan         PlanTier     @default(Free)
-  // Ramadan ops: when on, the dashboard shows an iftar-rush countdown so the
-  // manager gets drivers ready before the maghrib (sunset) surge.
-  ramadanMode  Boolean      @default(false)
-  iftarTime    String?      // "HH:mm" local, e.g. "18:05"
-  // Shop location — pickup point used to suggest the nearest idle driver.
-  shopLat      Float?
-  shopLng      Float?
-  createdAt    DateTime     @default(now())
-
-  drivers  Driver[]
-  orders   Order[]
-  users    ManagerUser[]
-  payments Payment[]
+  emoji        String? // 🌹 👑 🏎️ 🌌 🏰
+  animationUrl String?
+  priceCoins   Int
+  diamondValue Int // what the receiver earns (the spread = priceCoins - diamondValue proceeds)
+  rarity       Rarity      @default(COMMON)
+  broadcast    Boolean     @default(false) // room/global banner for premium gifts
+  active       Boolean     @default(true)
+  events       GiftEvent[]
 }
 
-// Subscription payment receipt. A statement of what was paid — El Kaptin issues
-// the reference and records the confirmation; it never holds the money.
-model Payment {
-  id           String     @id @default(uuid())
-  restaurantId String
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
-  plan         PlanTier
-  method       String     // fawry | vodafone | instapay
-  cycle        String     // monthly | annual
-  amount       Int        // piastres
-  reference    String
-  createdAt    DateTime   @default(now())
+model GiftEvent {
+  id         String   @id @default(cuid())
+  giftId     String
+  gift       Gift     @relation(fields: [giftId], references: [id])
+  senderId   String
+  sender     User     @relation("giftSender", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("giftReceiver", fields: [receiverId], references: [id])
+  roomId     String?
+  room       Room?    @relation(fields: [roomId], references: [id])
+  quantity   Int      @default(1)
+  coinsSpent Int
+  createdAt  DateTime @default(now())
 
-  @@index([restaurantId, createdAt])
+  @@index([receiverId, createdAt])
+  @@index([roomId, createdAt])
 }
 
-// Restaurant staff who log into the web dashboard (manager / cashier).
-model ManagerUser {
-  id           String     @id @default(uuid())
-  restaurantId String
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
-  name         String
-  email        String     @unique
-  passwordHash String
-  role         String     @default("manager") // manager | cashier
-  createdAt    DateTime   @default(now())
+// ─────────────────────────────── Audio rooms ───────────────────────────────────
 
-  @@index([restaurantId])
+model Room {
+  id                String       @id @default(cuid())
+  ownerId           String
+  owner             User         @relation("roomOwner", fields: [ownerId], references: [id])
+  title             String
+  category          String? // "Dating","Late Night","Music","Language Exchange",...
+  type              RoomType     @default(PUBLIC)
+  passwordHash      String? // for PRIVATE rooms
+  ticketPriceCoins  Int? // for TICKETED rooms
+  isLive            Boolean      @default(false)
+  seatCount         Int          @default(8)
+
+  // Language controls — see docs/PRODUCT.md §5.3
+  primaryLanguage   String?
+  allowedLanguages  String[] // include filter; empty = any
+  excludedLanguages String[] // exclude filter
+  languageLocked    Boolean      @default(false) // block mic seats for non-matching languages
+
+  agoraChannel      String       @unique @default(cuid())
+  createdAt         DateTime     @default(now())
+
+  members           RoomMember[]
+  giftEvents        GiftEvent[]
 }
 
-enum DriverStatus {
-  Idle
-  Delivering
-  Offline
+enum RoomType {
+  PUBLIC
+  PRIVATE
+  TICKETED
 }
 
-model Driver {
-  id           String       @id @default(uuid())
-  restaurantId String
-  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id])
-  name         String
-  phone        String
-  passwordHash String       // drivers log in with phone + PIN/password
-  status       DriverStatus @default(Offline)
-  // Deactivated when a driver leaves the business: login blocked, off the roster.
-  active       Boolean      @default(true)
+model RoomMember {
+  id       String   @id @default(cuid())
+  roomId   String
+  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     SeatRole @default(LISTENER)
+  seatIndex Int? // occupied mic seat (null = listener)
+  muted    Boolean  @default(false)
+  joinedAt DateTime @default(now())
 
-  // Hot columns: latest known position, updated on every location frame.
-  currentLat      Float?
-  currentLng      Float?
-  lastSeenAt      DateTime?
-  fcmToken        String?   // push token for new-assignment notifications
+  @@unique([roomId, userId])
+}
 
+enum SeatRole {
+  OWNER
+  MODERATOR
+  SPEAKER
+  LISTENER
+}
+
+// ─────────────────────────── Social graph & bonds ──────────────────────────────
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  likerId   String
+  liker     User     @relation("liker", fields: [likerId], references: [id], onDelete: Cascade)
+  likedId   String
+  liked     User     @relation("liked", fields: [likedId], references: [id], onDelete: Cascade)
+  superLike Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  orders       Order[]
-  locationLogs LocationLog[]
-
-  @@index([restaurantId, status])
+  @@unique([likerId, likedId])
 }
 
-enum OrderStatus {
-  Pending    // created, not yet assigned
-  Assigned   // given to a driver
-  PickedUp   // driver has food, en route
-  Delivered  // completed, cash collected
-  Failed     // driver couldn't deliver (customer not home / refused) — no cash
-  Cancelled
+// CP / couple bond 💞 — public pairing with a rising heart level.
+model Bond {
+  id         String   @id @default(cuid())
+  userAId    String
+  userA      User     @relation("bondUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId    String
+  userB      User     @relation("bondUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  heartXp    BigInt   @default(0)
+  heartLevel Int      @default(1)
+  title      String? // custom couple title
+  createdAt  DateTime @default(now())
+
+  @@unique([userAId, userBId])
 }
 
-model Order {
-  id               String      @id @default(uuid())
-  restaurantId     String
-  restaurant       Restaurant  @relation(fields: [restaurantId], references: [id])
-  driverId         String?
-  driver           Driver?     @relation(fields: [driverId], references: [id])
-
-  customerAddress  String
-  customerPhone    String?
-  // Egypt is landmark-addressed ("over the pharmacy, next to the mosque").
-  landmark         String?
-  notes            String?
-  // Pharmacy: does this delivery require a prescription (روشتة)?
-  requiresPrescription Boolean @default(false)
-  // Amount the driver must collect from the customer, in piastres.
-  totalCashToCollect Int
-  status           OrderStatus @default(Pending)
-
-  // Opaque token for the public customer tracking link (/t/:token). No auth.
-  publicToken      String   @unique @default(uuid())
-  // 4-digit code the customer gives the driver to confirm handover (anti-dispute).
-  deliveryOtp      String?
-  // Customer's post-delivery rating of the driver (1–5) + when.
-  rating           Int?
-  ratedAt          DateTime?
-
-  createdAt   DateTime  @default(now())
-  assignedAt  DateTime?
-  deliveredAt DateTime?
-  // Set true when the driver has physically handed this cash to the cashier.
-  settled     Boolean   @default(false)
-  settledAt   DateTime?
-
-  @@index([restaurantId, status])
-  @@index([driverId, status, settled])
+// Families / guilds / houses.
+model Family {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  badgeUrl  String?
+  level     Int            @default(1)
+  treasury  BigInt         @default(0) // coins/diamonds pooled
+  createdAt DateTime       @default(now())
+  members   FamilyMember[]
 }
 
-model LocationLog {
-  id        BigInt   @id @default(autoincrement())
-  driverId  String
-  driver    Driver   @relation(fields: [driverId], references: [id])
-  lat       Float
-  lng       Float
-  // Device timestamp (when the fix was taken), not server receive time.
-  timestamp DateTime
+model FamilyMember {
+  id       String     @id @default(cuid())
+  familyId String
+  family   Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  userId   String     @unique
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     FamilyRole @default(MEMBER)
+  joinedAt DateTime   @default(now())
+}
 
-  @@index([driverId, timestamp])
+enum FamilyRole {
+  LEADER
+  ELDER
+  MEMBER
 }

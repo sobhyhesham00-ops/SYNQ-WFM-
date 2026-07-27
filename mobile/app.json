@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Aura",
+    "slug": "aura",
+    "scheme": "aura",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0B1A",
+    "splash": {
+      "backgroundColor": "#0B0B1A",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aura.app"
+    },
+    "android": {
+      "package": "com.aura.app",
+      "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS", "INTERNET"]
+    },
+    "extra": {
+      "apiUrl": "http://localhost:4000"
+    }
+  }
+}
